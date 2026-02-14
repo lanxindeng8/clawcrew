@@ -46,6 +46,7 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Uninstall will:"
     echo "  - Remove ClawCrew agents from config"
     echo "  - Remove OrcaBot bindings"
+    echo "  - Remove broadcast entries"
     echo "  - Optionally remove Telegram account"
     echo "  - Optionally remove workspace folders"
     echo ""
@@ -64,6 +65,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     echo "This will remove:"
     echo "  - ClawCrew agents (orca, design, code, test)"
     echo "  - OrcaBot bindings"
+    echo "  - Broadcast entries for ClawCrew agents"
     echo "  - Telegram account (optional)"
     echo "  - Workspace folders (optional)"
     echo ""
@@ -103,25 +105,41 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
     echo "[1/4] Backed up config"
 
-    # Remove agents, bindings, and optionally account
+    # Remove agents, bindings, broadcast, and optionally account
     if [ -n "$REMOVE_ACCOUNT" ]; then
         jq --arg acc "$REMOVE_ACCOUNT" '
         # Remove ClawCrew agents
         .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
         # Remove ClawCrew bindings
         | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        # Remove broadcast entries containing ClawCrew agents
+        | if .broadcast then
+            .broadcast = (.broadcast | with_entries(
+              if .key == "strategy" then .
+              else .value = [.value[] | select(IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
+              end
+            ))
+          else . end
         # Remove specified account
         | del(.channels.telegram.accounts[$acc])
         ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
-        echo "[2/4] Removed agents, bindings, and account '$REMOVE_ACCOUNT'"
+        echo "[2/4] Removed agents, bindings, broadcast, and account '$REMOVE_ACCOUNT'"
     else
         jq '
         # Remove ClawCrew agents
         .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
         # Remove ClawCrew bindings
         | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        # Remove broadcast entries containing ClawCrew agents
+        | if .broadcast then
+            .broadcast = (.broadcast | with_entries(
+              if .key == "strategy" then .
+              else .value = [.value[] | select(IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
+              end
+            ))
+          else . end
         ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
-        echo "[2/4] Removed agents and bindings (account kept)"
+        echo "[2/4] Removed agents, bindings, and broadcast (account kept)"
     fi
 
     # Remove workspace folders
