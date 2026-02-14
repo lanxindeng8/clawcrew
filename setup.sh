@@ -94,6 +94,54 @@ if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
 fi
 
 echo ""
+echo "--- Checking Current Configuration ---"
+
+# Check required settings
+ISSUES=()
+
+# Check agents.defaults.subagents.maxConcurrent
+SUBAGENT_MAX=$(jq -r '.agents.defaults.subagents.maxConcurrent // 0' "$OPENCLAW_CONFIG")
+if [ "$SUBAGENT_MAX" -lt 8 ]; then
+    echo "  ⚠️  agents.defaults.subagents.maxConcurrent = $SUBAGENT_MAX (need >= 8)"
+    ISSUES+=("subagents_max")
+else
+    echo "  ✓  agents.defaults.subagents.maxConcurrent = $SUBAGENT_MAX"
+fi
+
+# Check channels.telegram.enabled
+TG_ENABLED=$(jq -r '.channels.telegram.enabled // false' "$OPENCLAW_CONFIG")
+if [ "$TG_ENABLED" != "true" ]; then
+    echo "  ⚠️  channels.telegram.enabled = $TG_ENABLED (need true)"
+    ISSUES+=("telegram_enabled")
+else
+    echo "  ✓  channels.telegram.enabled = true"
+fi
+
+# Check channels.telegram.groupPolicy
+TG_GROUP_POLICY=$(jq -r '.channels.telegram.groupPolicy // "none"' "$OPENCLAW_CONFIG")
+if [ "$TG_GROUP_POLICY" != "allowlist" ]; then
+    echo "  ⚠️  channels.telegram.groupPolicy = $TG_GROUP_POLICY (need allowlist)"
+    ISSUES+=("telegram_group_policy")
+else
+    echo "  ✓  channels.telegram.groupPolicy = allowlist"
+fi
+
+# Check plugins.entries.telegram.enabled
+TG_PLUGIN=$(jq -r '.plugins.entries.telegram.enabled // false' "$OPENCLAW_CONFIG")
+if [ "$TG_PLUGIN" != "true" ]; then
+    echo "  ⚠️  plugins.entries.telegram.enabled = $TG_PLUGIN (need true)"
+    ISSUES+=("telegram_plugin")
+else
+    echo "  ✓  plugins.entries.telegram.enabled = true"
+fi
+
+echo ""
+if [ ${#ISSUES[@]} -gt 0 ]; then
+    echo "Found ${#ISSUES[@]} setting(s) that need to be updated."
+    echo "These will be automatically fixed during setup."
+fi
+
+echo ""
 echo "--- Setting up ClawCrew ---"
 
 # Convert comma-separated IDs to JSON array
@@ -101,7 +149,7 @@ ALLOWED_IDS_JSON=$(echo "$ALLOWED_IDS" | tr ',' '\n' | jq -R . | jq -s .)
 
 # Backup the original config
 cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
-echo "[1/4] Backed up original config"
+echo "[1/5] Backed up original config"
 
 # Create the agents JSON
 AGENTS_JSON=$(cat <<EOF
@@ -204,28 +252,58 @@ jq --argjson agents "$AGENTS_JSON" \
    --argjson account "$ACCOUNT_JSON" \
    --arg account_name "$ACCOUNT_NAME" \
    '
+   # === Required Settings ===
+   # Ensure agents.defaults exists
+   .agents.defaults = (if .agents.defaults then .agents.defaults else {} end)
+   # Ensure agents.defaults.subagents exists
+   | .agents.defaults.subagents = (if .agents.defaults.subagents then .agents.defaults.subagents else {} end)
+   # Set subagents.maxConcurrent to at least 8
+   | .agents.defaults.subagents.maxConcurrent = (if (.agents.defaults.subagents.maxConcurrent // 0) < 8 then 8 else .agents.defaults.subagents.maxConcurrent end)
+
+   # Ensure channels.telegram exists
+   | .channels = (if .channels then .channels else {} end)
+   | .channels.telegram = (if .channels.telegram then .channels.telegram else {} end)
+   # Enable telegram channel
+   | .channels.telegram.enabled = true
+   # Set groupPolicy to allowlist
+   | .channels.telegram.groupPolicy = "allowlist"
+
+   # Ensure plugins.entries exists
+   | .plugins = (if .plugins then .plugins else {} end)
+   | .plugins.entries = (if .plugins.entries then .plugins.entries else {} end)
+   | .plugins.entries.telegram = (if .plugins.entries.telegram then .plugins.entries.telegram else {} end)
+   # Enable telegram plugin
+   | .plugins.entries.telegram.enabled = true
+
+   # === ClawCrew Agents ===
+   # Ensure agents.list exists
+   | .agents.list = (if .agents.list then .agents.list else [] end)
    # Remove existing clawcrew agents if any
-   .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+   | .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
    # Add new agents
    | .agents.list += $agents
+
+   # === Bindings ===
    # Initialize bindings if not exists
    | .bindings = (if .bindings then .bindings else [] end)
    # Remove existing orca binding if any
    | .bindings = [.bindings[] | select(.agentId != "orca")]
    # Add new binding
    | .bindings += [$binding]
+
+   # === Telegram Account ===
    # Ensure channels.telegram.accounts exists
    | .channels.telegram.accounts = (if .channels.telegram.accounts then .channels.telegram.accounts else {} end)
    # Add account
    | .channels.telegram.accounts[$account_name] = $account
-   # Enable telegram plugin
-   | .plugins.entries.telegram.enabled = true
    ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
 
-echo "[2/4] Updated openclaw.json with agents and bindings"
+echo "[2/5] Updated openclaw.json with required settings"
+
+echo "[3/5] Added ClawCrew agents and Telegram binding"
 
 # Copy workspace folders
-echo "[3/4] Copying workspace folders..."
+echo "[4/5] Copying workspace folders..."
 
 for workspace in workspace-orca workspace-design workspace-code workspace-test; do
     if [ -d "$SCRIPT_DIR/$workspace" ]; then
@@ -236,7 +314,49 @@ for workspace in workspace-orca workspace-design workspace-code workspace-test; 
     fi
 done
 
-echo "[4/4] Setup complete!"
+# Verify settings
+echo "[5/5] Verifying configuration..."
+VERIFY_ERRORS=0
+
+VERIFY_SUBAGENT=$(jq -r '.agents.defaults.subagents.maxConcurrent' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_SUBAGENT" -ge 8 ]; then
+    echo "  ✓  subagents.maxConcurrent = $VERIFY_SUBAGENT"
+else
+    echo "  ✗  subagents.maxConcurrent = $VERIFY_SUBAGENT (expected >= 8)"
+    VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
+fi
+
+VERIFY_TG=$(jq -r '.channels.telegram.enabled' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_TG" = "true" ]; then
+    echo "  ✓  telegram.enabled = true"
+else
+    echo "  ✗  telegram.enabled = $VERIFY_TG"
+    VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
+fi
+
+VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_AGENTS" -eq 4 ]; then
+    echo "  ✓  ClawCrew agents added (4/4)"
+else
+    echo "  ✗  ClawCrew agents: $VERIFY_AGENTS/4"
+    VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
+fi
+
+VERIFY_BINDING=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_BINDING" -ge 1 ]; then
+    echo "  ✓  OrcaBot binding configured"
+else
+    echo "  ✗  OrcaBot binding missing"
+    VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
+fi
+
+if [ $VERIFY_ERRORS -gt 0 ]; then
+    echo ""
+    echo "⚠️  Setup completed with $VERIFY_ERRORS warning(s). Please check the config manually."
+else
+    echo ""
+    echo "✓  All settings verified successfully!"
+fi
 
 echo ""
 echo "================================================"
