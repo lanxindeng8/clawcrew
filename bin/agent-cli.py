@@ -1,45 +1,84 @@
 #!/usr/bin/env python3
 """
-ClawCrew Agent CLI - Unified entry point for all sub-agents.
+ClawCrew Agent CLI
+
+A unified command-line interface for running specialized AI agents.
+Each agent has its own workspace with SOUL.md (personality) and memory/ (lessons learned).
 
 Usage:
-    ./bin/agent-cli.py --agent design --task "Design a REST API for user auth"
-    ./bin/agent-cli.py -a code -t "Implement the auth module" -o artifacts/task-123/auth.py
-    ./bin/agent-cli.py -a test -t "Write tests for auth.py" --context artifacts/task-123/auth.py
+    ./bin/agent-cli.py run -a design -t "Design a REST API"
+    ./bin/agent-cli.py run -a code -t "Implement module" -c design.md -o main.py
+    ./bin/agent-cli.py run -a test -t "Write tests" -c main.py -o test_main.py
+    ./bin/agent-cli.py list-agents
+    ./bin/agent-cli.py show-memory -a design
+    ./bin/agent-cli.py clear-memory -a design --all
+
+Agents:
+    design  - System Architect: API design, data models, specifications
+    code    - Software Engineer: Implementation, coding
+    test    - QA Engineer: Testing, coverage, bug finding
+    orca    - Orchestrator: Coordinates other agents (used by OrcaBot)
+
+Memory System:
+    Each agent stores lessons learned in memory/YYYY-MM-DD.md files.
+    Memories are automatically loaded when running tasks and updated after completion.
+
+More info: https://github.com/lanxindeng8/clawcrew
 """
 
 import typer
 import json
-import os
-import sys
 import uuid
 import httpx
+import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 
-app = typer.Typer(add_completion=False, help="ClawCrew Agent CLI - Run specialized agents")
+# Enable -h as help shortcut
+app = typer.Typer(
+    add_completion=False,
+    help="ClawCrew Agent CLI - Run specialized AI agents",
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+
+# =============================================================================
+# Configuration
+# =============================================================================
 
 # Project root (parent of bin/)
 BASE_DIR = Path(__file__).parent.parent
 
-# Agent → workspace mapping
+# Agent name → workspace directory mapping
+# To add a new agent, just add a line here and create the workspace folder
 AGENT_WORKSPACES = {
     "orca": "workspace-orca",
     "design": "workspace-design",
     "code": "workspace-code",
     "test": "workspace-test",
-    # Future agents can be added here
 }
 
-# OpenClaw Gateway config
+# OpenClaw config path
 OPENCLAW_CONFIG_PATH = Path.home() / ".openclaw" / "openclaw.json"
 
 
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
 def get_gateway_config() -> tuple[str, str]:
-    """Get gateway URL and auth token from openclaw.json"""
+    """
+    Read OpenClaw gateway URL and auth token from ~/.openclaw/openclaw.json.
+
+    Returns:
+        tuple: (gateway_url, auth_token)
+
+    Raises:
+        typer.Exit: If config file not found
+    """
     if not OPENCLAW_CONFIG_PATH.exists():
-        raise typer.Exit("OpenClaw config not found. Please install OpenClaw first.")
+        typer.echo("Error: OpenClaw config not found. Please install OpenClaw first.", err=True)
+        raise typer.Exit(1)
 
     config = json.loads(OPENCLAW_CONFIG_PATH.read_text())
     port = config.get("gateway", {}).get("port", 18789)
@@ -49,12 +88,25 @@ def get_gateway_config() -> tuple[str, str]:
 
 
 def get_workspace(agent_name: str) -> Path:
-    """Get workspace path for an agent"""
+    """
+    Get workspace path for an agent.
+
+    Checks BASE_DIR first (dev mode), then ~/.openclaw (installed mode).
+
+    Args:
+        agent_name: Name of the agent (design, code, test, orca)
+
+    Returns:
+        Path to the workspace directory
+
+    Raises:
+        typer.BadParameter: If agent unknown or workspace not found
+    """
     if agent_name not in AGENT_WORKSPACES:
         available = ", ".join(AGENT_WORKSPACES.keys())
         raise typer.BadParameter(f"Unknown agent: {agent_name}. Available: {available}")
 
-    # Check in BASE_DIR first (dev mode), then in ~/.openclaw (installed mode)
+    # Check dev mode first, then installed mode
     ws_path = BASE_DIR / AGENT_WORKSPACES[agent_name]
     if not ws_path.exists():
         ws_path = Path.home() / ".openclaw" / AGENT_WORKSPACES[agent_name]
@@ -66,7 +118,18 @@ def get_workspace(agent_name: str) -> Path:
 
 
 def load_soul(ws: Path) -> str:
-    """Load SOUL.md from workspace"""
+    """
+    Load SOUL.md from workspace.
+
+    SOUL.md defines the agent's personality, responsibilities, and output format.
+    Creates a default SOUL if not exists.
+
+    Args:
+        ws: Workspace path
+
+    Returns:
+        Content of SOUL.md
+    """
     soul_path = ws / "SOUL.md"
     if soul_path.exists():
         return soul_path.read_text(encoding="utf-8")
@@ -78,7 +141,18 @@ def load_soul(ws: Path) -> str:
 
 
 def load_memory(ws: Path, days: int = 7) -> str:
-    """Load recent memories from memory/YYYY-MM-DD.md files"""
+    """
+    Load recent memories from memory/YYYY-MM-DD.md files.
+
+    Memories contain lessons learned from past tasks, helping agents improve over time.
+
+    Args:
+        ws: Workspace path
+        days: Number of days to look back
+
+    Returns:
+        Combined memory content as markdown string
+    """
     memory_dir = ws / "memory"
     if not memory_dir.exists():
         return ""
@@ -86,7 +160,6 @@ def load_memory(ws: Path, days: int = 7) -> str:
     memories = []
     today = datetime.now().date()
 
-    # Load memories from recent days
     for i in range(days):
         date = today - timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
@@ -97,20 +170,31 @@ def load_memory(ws: Path, days: int = 7) -> str:
             if content:
                 memories.append(f"## {date_str}\n{content}")
 
-    if not memories:
-        return ""
-
-    return "\n\n".join(memories)
+    return "\n\n".join(memories) if memories else ""
 
 
 def save_memory(ws: Path, task_id: str, task: str, output_file: Optional[str], lesson: str):
-    """Append a memory entry to memory/YYYY-MM-DD.md"""
+    """
+    Append a memory entry to today's memory file.
+
+    Memory format:
+        ### HH:MM:SS - task_id
+        **Task:** ...
+        **Output:** ...
+        **Lesson:** ...
+
+    Args:
+        ws: Workspace path
+        task_id: Unique task identifier
+        task: Task description
+        output_file: Output file path (or None)
+        lesson: Lesson learned from this task
+    """
     memory_dir = ws / "memory"
     memory_dir.mkdir(exist_ok=True)
 
     today = datetime.now().strftime("%Y-%m-%d")
     memory_file = memory_dir / f"{today}.md"
-
     timestamp = datetime.now().strftime("%H:%M:%S")
 
     entry = f"""
@@ -125,13 +209,26 @@ def save_memory(ws: Path, task_id: str, task: str, output_file: Optional[str], l
 ---
 """
 
-    # Append to today's file
     with open(memory_file, "a", encoding="utf-8") as f:
         f.write(entry)
 
 
 def call_llm(prompt: str, model: str = "anthropic/claude-sonnet-4-5") -> str:
-    """Call LLM via OpenClaw gateway"""
+    """
+    Call LLM via OpenClaw gateway.
+
+    Uses the local gateway's OpenAI-compatible API endpoint.
+
+    Args:
+        prompt: The prompt to send
+        model: Model identifier (default: claude-sonnet-4-5)
+
+    Returns:
+        LLM response content
+
+    Raises:
+        typer.Exit: On HTTP errors
+    """
     gateway_url, token = get_gateway_config()
 
     try:
@@ -157,15 +254,29 @@ def call_llm(prompt: str, model: str = "anthropic/claude-sonnet-4-5") -> str:
 
 
 def extract_output(response: str) -> str:
-    """Extract content between ---OUTPUT--- markers if present"""
+    """
+    Extract content between ---OUTPUT--- and ---END OUTPUT--- markers.
+
+    If markers not found, returns the full response.
+
+    Args:
+        response: LLM response text
+
+    Returns:
+        Extracted output or full response
+    """
     if "---OUTPUT---" in response and "---END OUTPUT---" in response:
         return response.split("---OUTPUT---")[1].split("---END OUTPUT---")[0].strip()
     return response
 
 
+# =============================================================================
+# Commands
+# =============================================================================
+
 @app.command()
 def run(
-    agent: str = typer.Option(..., "--agent", "-a", help="Agent name: design, code, test"),
+    agent: str = typer.Option(..., "--agent", "-a", help="Agent name: design, code, test, orca"),
     task: str = typer.Option(..., "--task", "-t", help="Task description"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
     context: Optional[str] = typer.Option(None, "--context", "-c", help="Context file to read"),
@@ -177,26 +288,32 @@ def run(
     """
     Run a specialized agent with a task.
 
+    The agent loads its SOUL.md (personality) and recent memories,
+    executes the task, saves output, and updates its memory with lessons learned.
+
     Examples:
-        ./bin/agent-cli.py -a design -t "Design REST API for user auth"
-        ./bin/agent-cli.py -a code -t "Implement auth module" -c design.md -o auth.py
-        ./bin/agent-cli.py -a test -t "Write tests" -c auth.py -o test_auth.py
+
+        # Design an API
+        ./bin/agent-cli.py run -a design -t "Design REST API for user auth"
+
+        # Implement with context from design
+        ./bin/agent-cli.py run -a code -t "Implement auth" -c design.md -o auth.py
+
+        # Write tests
+        ./bin/agent-cli.py run -a test -t "Write tests" -c auth.py -o test_auth.py
     """
     # Generate task ID if not provided
     if not task_id:
         task_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + str(uuid.uuid4())[:8]
 
-    # Get workspace
     ws = get_workspace(agent)
 
     if verbose:
         typer.echo(f"[{agent.upper()}] Workspace: {ws}")
         typer.echo(f"[{agent.upper()}] Task ID: {task_id}")
 
-    # Load SOUL
+    # Load SOUL and memory
     soul = load_soul(ws)
-
-    # Load memory
     memory = "" if no_memory else load_memory(ws)
 
     # Load context file if provided
@@ -209,14 +326,7 @@ def run(
             typer.echo(f"Warning: Context file not found: {context}", err=True)
 
     # Build prompt
-    memory_section = ""
-    if memory:
-        memory_section = f"""
-## Recent Memories (lessons learned from past tasks)
-
-{memory}
-"""
-
+    memory_section = f"\n## Recent Memories\n\n{memory}\n" if memory else ""
     output_instruction = ""
     if output:
         output_instruction = f"""
@@ -229,9 +339,7 @@ Format your final deliverable between these markers:
 """
 
     prompt = f"""{soul}
-
 {memory_section}
-
 ## Current Task
 Task ID: {task_id}
 {task}
@@ -246,27 +354,25 @@ Respond professionally and concisely. Focus on delivering high-quality work.
 
     # Call LLM
     response = call_llm(prompt, model)
-
-    # Extract and save output
     final_output = extract_output(response)
 
+    # Save output
     if output:
         out_path = Path(output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(final_output, encoding="utf-8")
         typer.echo(f"[{agent.upper()}] Output saved to: {output}")
     else:
-        # Print response to stdout
         typer.echo(response)
 
     # Auto-reflection and memory update
     if not no_memory:
-        lesson_prompt = f"""You just completed a task. Briefly summarize the key lesson or improvement for future similar tasks.
+        lesson_prompt = f"""You just completed a task. Briefly summarize the key lesson for future similar tasks.
 
 Task: {task[:500]}
 Output summary: {final_output[:500]}...
 
-Respond with ONE short sentence (max 100 chars) capturing the key lesson."""
+Respond with ONE short sentence (max 100 chars)."""
 
         try:
             lesson = call_llm(lesson_prompt, "anthropic/claude-haiku-3")
@@ -282,22 +388,30 @@ Respond with ONE short sentence (max 100 chars) capturing the key lesson."""
     typer.echo(f"[{agent.upper()}] Task {task_id} completed.")
 
 
-@app.command()
+@app.command("list-agents")
 def list_agents():
-    """List available agents and their workspaces"""
-    typer.echo("Available agents:")
+    """List available agents and their workspace status."""
+    typer.echo("Available agents:\n")
+    typer.echo("  Agent       Workspace              Status")
+    typer.echo("  " + "-" * 50)
     for agent, ws_name in AGENT_WORKSPACES.items():
         ws = BASE_DIR / ws_name
-        status = "✓" if ws.exists() else "✗"
-        typer.echo(f"  {status} {agent:10} → {ws_name}")
+        installed_ws = Path.home() / ".openclaw" / ws_name
+        if ws.exists():
+            status = "✓ (dev)"
+        elif installed_ws.exists():
+            status = "✓ (installed)"
+        else:
+            status = "✗ not found"
+        typer.echo(f"  {agent:10}  {ws_name:20}  {status}")
 
 
-@app.command()
+@app.command("show-memory")
 def show_memory(
     agent: str = typer.Option(..., "--agent", "-a", help="Agent name"),
     days: int = typer.Option(7, "--days", "-d", help="Number of days to show"),
 ):
-    """Show recent memories for an agent"""
+    """Show recent memories for an agent."""
     ws = get_workspace(agent)
     memory = load_memory(ws, days)
 
@@ -309,12 +423,12 @@ def show_memory(
     typer.echo(memory)
 
 
-@app.command()
+@app.command("clear-memory")
 def clear_memory(
     agent: str = typer.Option(..., "--agent", "-a", help="Agent name"),
     all_days: bool = typer.Option(False, "--all", help="Clear all memory files"),
 ):
-    """Clear memories for an agent"""
+    """Clear memories for an agent."""
     ws = get_workspace(agent)
     memory_dir = ws / "memory"
 
@@ -323,12 +437,9 @@ def clear_memory(
         return
 
     if all_days:
-        # Remove all memory files
-        import shutil
         shutil.rmtree(memory_dir)
         typer.echo(f"Cleared all memories for {agent}")
     else:
-        # Remove only today's file
         today = datetime.now().strftime("%Y-%m-%d")
         today_file = memory_dir / f"{today}.md"
         if today_file.exists():
