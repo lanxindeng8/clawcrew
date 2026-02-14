@@ -15,7 +15,7 @@ import sys
 import uuid
 import httpx
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 app = typer.Typer(add_completion=False, help="ClawCrew Agent CLI - Run specialized agents")
@@ -77,37 +77,57 @@ def load_soul(ws: Path) -> str:
     return default_soul
 
 
-def load_memory(ws: Path, limit: int = 8) -> list:
-    """Load recent memories from MEMORY.json"""
-    memory_path = ws / "MEMORY.json"
-    if memory_path.exists():
-        try:
-            data = json.loads(memory_path.read_text(encoding="utf-8"))
-            return data[-limit:] if isinstance(data, list) else []
-        except json.JSONDecodeError:
-            return []
-    return []
+def load_memory(ws: Path, days: int = 7) -> str:
+    """Load recent memories from memory/YYYY-MM-DD.md files"""
+    memory_dir = ws / "memory"
+    if not memory_dir.exists():
+        return ""
+
+    memories = []
+    today = datetime.now().date()
+
+    # Load memories from recent days
+    for i in range(days):
+        date = today - timedelta(days=i)
+        date_str = date.strftime("%Y-%m-%d")
+        memory_file = memory_dir / f"{date_str}.md"
+
+        if memory_file.exists():
+            content = memory_file.read_text(encoding="utf-8").strip()
+            if content:
+                memories.append(f"## {date_str}\n{content}")
+
+    if not memories:
+        return ""
+
+    return "\n\n".join(memories)
 
 
-def save_memory(ws: Path, entry: dict):
-    """Append a memory entry to MEMORY.json"""
-    memory_path = ws / "MEMORY.json"
-    data = []
-    if memory_path.exists():
-        try:
-            data = json.loads(memory_path.read_text(encoding="utf-8"))
-            if not isinstance(data, list):
-                data = []
-        except json.JSONDecodeError:
-            data = []
+def save_memory(ws: Path, task_id: str, task: str, output_file: Optional[str], lesson: str):
+    """Append a memory entry to memory/YYYY-MM-DD.md"""
+    memory_dir = ws / "memory"
+    memory_dir.mkdir(exist_ok=True)
 
-    data.append(entry)
+    today = datetime.now().strftime("%Y-%m-%d")
+    memory_file = memory_dir / f"{today}.md"
 
-    # Keep last 100 entries
-    if len(data) > 100:
-        data = data[-100:]
+    timestamp = datetime.now().strftime("%H:%M:%S")
 
-    memory_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    entry = f"""
+### {timestamp} - {task_id}
+
+**Task:** {task[:200]}
+
+**Output:** {output_file or 'stdout'}
+
+**Lesson:** {lesson}
+
+---
+"""
+
+    # Append to today's file
+    with open(memory_file, "a", encoding="utf-8") as f:
+        f.write(entry)
 
 
 def call_llm(prompt: str, model: str = "anthropic/claude-sonnet-4-5") -> str:
@@ -177,7 +197,7 @@ def run(
     soul = load_soul(ws)
 
     # Load memory
-    memory = [] if no_memory else load_memory(ws)
+    memory = "" if no_memory else load_memory(ws)
 
     # Load context file if provided
     context_content = ""
@@ -193,7 +213,8 @@ def run(
     if memory:
         memory_section = f"""
 ## Recent Memories (lessons learned from past tasks)
-{json.dumps(memory, ensure_ascii=False, indent=2)}
+
+{memory}
 """
 
     output_instruction = ""
@@ -253,14 +274,7 @@ Respond with ONE short sentence (max 100 chars) capturing the key lesson."""
         except Exception:
             lesson = "Task completed successfully."
 
-        memory_entry = {
-            "task_id": task_id,
-            "timestamp": datetime.now().isoformat(),
-            "task": task[:200],
-            "output_file": output,
-            "lesson": lesson,
-        }
-        save_memory(ws, memory_entry)
+        save_memory(ws, task_id, task, output, lesson)
 
         if verbose:
             typer.echo(f"[{agent.upper()}] Memory updated: {lesson}")
@@ -281,36 +295,47 @@ def list_agents():
 @app.command()
 def show_memory(
     agent: str = typer.Option(..., "--agent", "-a", help="Agent name"),
-    limit: int = typer.Option(10, "--limit", "-n", help="Number of entries to show"),
+    days: int = typer.Option(7, "--days", "-d", help="Number of days to show"),
 ):
     """Show recent memories for an agent"""
     ws = get_workspace(agent)
-    memories = load_memory(ws, limit)
+    memory = load_memory(ws, days)
 
-    if not memories:
-        typer.echo(f"No memories found for {agent}")
+    if not memory:
+        typer.echo(f"No memories found for {agent} in the last {days} days")
         return
 
-    typer.echo(f"Recent memories for {agent} ({len(memories)} entries):\n")
-    for m in memories:
-        typer.echo(f"  [{m.get('timestamp', 'N/A')[:10]}] {m.get('task', 'N/A')[:50]}...")
-        typer.echo(f"    Lesson: {m.get('lesson', 'N/A')}")
-        typer.echo()
+    typer.echo(f"Recent memories for {agent}:\n")
+    typer.echo(memory)
 
 
 @app.command()
 def clear_memory(
     agent: str = typer.Option(..., "--agent", "-a", help="Agent name"),
+    all_days: bool = typer.Option(False, "--all", help="Clear all memory files"),
 ):
-    """Clear all memories for an agent"""
+    """Clear memories for an agent"""
     ws = get_workspace(agent)
-    memory_path = ws / "MEMORY.json"
+    memory_dir = ws / "memory"
 
-    if memory_path.exists():
-        memory_path.unlink()
-        typer.echo(f"Cleared memories for {agent}")
-    else:
+    if not memory_dir.exists():
         typer.echo(f"No memories to clear for {agent}")
+        return
+
+    if all_days:
+        # Remove all memory files
+        import shutil
+        shutil.rmtree(memory_dir)
+        typer.echo(f"Cleared all memories for {agent}")
+    else:
+        # Remove only today's file
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_file = memory_dir / f"{today}.md"
+        if today_file.exists():
+            today_file.unlink()
+            typer.echo(f"Cleared today's memories for {agent}")
+        else:
+            typer.echo(f"No memories to clear for {agent} today")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 copied
 artifacts/
-**/MEMORY.json
+**/memory/
 __pycache__/
 *.pyc
 .venv/
