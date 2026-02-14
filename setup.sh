@@ -135,6 +135,15 @@ else
     echo "  ✓  plugins.entries.telegram.enabled = true"
 fi
 
+# Check if bot token is already used by another account
+EXISTING_ACCOUNT=$(jq -r --arg token "$BOT_TOKEN" '.channels.telegram.accounts // {} | to_entries[] | select(.value.botToken == $token) | .key' "$OPENCLAW_CONFIG" 2>/dev/null || echo "")
+if [ -n "$EXISTING_ACCOUNT" ] && [ "$EXISTING_ACCOUNT" != "$ACCOUNT_NAME" ]; then
+    echo "  ⚠️  Bot token already used by account: $EXISTING_ACCOUNT (will be removed)"
+    ISSUES+=("duplicate_token")
+else
+    echo "  ✓  Bot token not in use by other accounts"
+fi
+
 echo ""
 if [ ${#ISSUES[@]} -gt 0 ]; then
     echo "Found ${#ISSUES[@]} setting(s) that need to be updated."
@@ -294,6 +303,8 @@ jq --argjson agents "$AGENTS_JSON" \
    # === Telegram Account ===
    # Ensure channels.telegram.accounts exists
    | .channels.telegram.accounts = (if .channels.telegram.accounts then .channels.telegram.accounts else {} end)
+   # Remove any existing account using the same bot token
+   | .channels.telegram.accounts = (.channels.telegram.accounts | with_entries(select(.value.botToken != $account.botToken)))
    # Add account
    | .channels.telegram.accounts[$account_name] = $account
    ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
