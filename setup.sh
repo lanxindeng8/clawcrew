@@ -431,8 +431,8 @@ echo "[2/5] Updated openclaw.json with required settings"
 
 echo "[3/5] Added OrcaBot agent and Telegram binding"
 
-# Copy workspace folders
-echo "[4/5] Copying workspace folders..."
+# Copy workspace folders and bin
+echo "[4/5] Copying files..."
 
 for workspace in workspace-orca workspace-design workspace-code workspace-test; do
     if [ -d "$SCRIPT_DIR/$workspace" ]; then
@@ -442,6 +442,17 @@ for workspace in workspace-orca workspace-design workspace-code workspace-test; 
         echo "  Warning: $workspace not found in $SCRIPT_DIR"
     fi
 done
+
+# Copy bin folder
+if [ -d "$SCRIPT_DIR/bin" ]; then
+    cp -r "$SCRIPT_DIR/bin" "$OPENCLAW_DIR/"
+    chmod +x "$OPENCLAW_DIR/bin/"*.py 2>/dev/null
+    echo "  Copied bin/"
+fi
+
+# Create artifacts folder
+mkdir -p "$OPENCLAW_DIR/artifacts"
+echo "  Created artifacts/"
 
 # Verify settings
 echo "[5/5] Verifying configuration..."
@@ -501,11 +512,13 @@ echo "     'Create a Python module to calculate distance between two points'"
 echo ""
 echo "  3. Watch OrcaBot coordinate the team!"
 echo ""
-echo "Workspaces installed at:"
-echo "  $OPENCLAW_DIR/workspace-orca"
-echo "  $OPENCLAW_DIR/workspace-design"
-echo "  $OPENCLAW_DIR/workspace-code"
-echo "  $OPENCLAW_DIR/workspace-test"
+echo "Installed at $OPENCLAW_DIR/:"
+echo "  workspace-orca/    — Orchestrator"
+echo "  workspace-design/  — Design agent"
+echo "  workspace-code/    — Code agent"
+echo "  workspace-test/    — Test agent"
+echo "  bin/               — CLI tool"
+echo "  artifacts/         — Task outputs"
 echo ""
 echo "Config backup saved. To revert:"
 echo "  cp $OPENCLAW_CONFIG.backup.* $OPENCLAW_CONFIG"
