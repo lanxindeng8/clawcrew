@@ -9,11 +9,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OPENCLAW_DIR="$HOME/.openclaw"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 
-echo "================================================"
-echo "  ClawCrew Setup - Multi-Agent Dev Team"
-echo "================================================"
-echo ""
-
 # Check if openclaw.json exists
 if [ ! -f "$OPENCLAW_CONFIG" ]; then
     echo "Error: OpenClaw config not found at $OPENCLAW_CONFIG"
@@ -29,6 +24,120 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
+# ============================================================
+# UNINSTALL MODE
+# ============================================================
+if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
+    echo "================================================"
+    echo "  ClawCrew Uninstall"
+    echo "================================================"
+    echo ""
+    echo "This will remove:"
+    echo "  - ClawCrew agents (orca, design, code, test)"
+    echo "  - OrcaBot bindings"
+    echo "  - Telegram account (optional)"
+    echo "  - Workspace folders (optional)"
+    echo ""
+
+    # Show current ClawCrew accounts
+    echo "--- Current ClawCrew Configuration ---"
+    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+    echo "  Agents installed: $CLAWCREW_AGENTS"
+
+    ORCA_BINDINGS=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
+    echo "  OrcaBot bindings: $ORCA_BINDINGS"
+
+    # List telegram accounts that might be ClawCrew related
+    echo ""
+    echo "  Telegram accounts:"
+    jq -r '.channels.telegram.accounts // {} | keys[]' "$OPENCLAW_CONFIG" 2>/dev/null | while read -r acc; do
+        echo "    - $acc"
+    done
+
+    echo ""
+    read -p "Account name to remove (leave empty to skip): " REMOVE_ACCOUNT
+
+    echo ""
+    read -p "Also remove workspace folders? (y/n): " REMOVE_WORKSPACES
+
+    echo ""
+    read -p "Proceed with uninstall? (y/n): " CONFIRM
+    if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
+        echo "Uninstall cancelled."
+        exit 0
+    fi
+
+    echo ""
+    echo "--- Uninstalling ClawCrew ---"
+
+    # Backup config
+    cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
+    echo "[1/4] Backed up config"
+
+    # Remove agents, bindings, and optionally account
+    if [ -n "$REMOVE_ACCOUNT" ]; then
+        jq --arg acc "$REMOVE_ACCOUNT" '
+        # Remove ClawCrew agents
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        # Remove ClawCrew bindings
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        # Remove specified account
+        | del(.channels.telegram.accounts[$acc])
+        ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
+        echo "[2/4] Removed agents, bindings, and account '$REMOVE_ACCOUNT'"
+    else
+        jq '
+        # Remove ClawCrew agents
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        # Remove ClawCrew bindings
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
+        echo "[2/4] Removed agents and bindings (account kept)"
+    fi
+
+    # Remove workspace folders
+    if [ "$REMOVE_WORKSPACES" = "y" ] || [ "$REMOVE_WORKSPACES" = "Y" ]; then
+        for workspace in workspace-orca workspace-design workspace-code workspace-test; do
+            if [ -d "$OPENCLAW_DIR/$workspace" ]; then
+                rm -rf "$OPENCLAW_DIR/$workspace"
+                echo "[3/4] Removed $OPENCLAW_DIR/$workspace"
+            fi
+        done
+    else
+        echo "[3/4] Workspace folders kept"
+    fi
+
+    # Verify
+    echo "[4/4] Verifying..."
+    REMAINING_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+    REMAINING_BINDINGS=$(jq -r '.bindings | map(select(.agentId | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+
+    if [ "$REMAINING_AGENTS" -eq 0 ] && [ "$REMAINING_BINDINGS" -eq 0 ]; then
+        echo "  ✓  All ClawCrew components removed"
+    else
+        echo "  ⚠️  Some components may remain (agents: $REMAINING_AGENTS, bindings: $REMAINING_BINDINGS)"
+    fi
+
+    echo ""
+    echo "================================================"
+    echo "  ClawCrew uninstalled!"
+    echo "================================================"
+    echo ""
+    echo "Don't forget to restart OpenClaw gateway:"
+    echo "  openclaw gateway restart"
+    echo ""
+    exit 0
+fi
+
+# ============================================================
+# INSTALL MODE
+# ============================================================
+echo "================================================"
+echo "  ClawCrew Setup - Multi-Agent Dev Team"
+echo "================================================"
+echo ""
+echo "Usage: ./setup.sh [--uninstall|-u]"
+echo ""
 echo "This script will:"
 echo "  1. Add ClawCrew agents (OrcaBot, DesignBot, CodeBot, TestBot)"
 echo "  2. Configure Telegram group binding"
