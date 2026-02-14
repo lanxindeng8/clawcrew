@@ -25,6 +25,35 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # ============================================================
+# HELP
+# ============================================================
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    echo "ClawCrew Setup - Multi-Agent Dev Team for OpenClaw"
+    echo ""
+    echo "Usage: ./setup.sh [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  (no args)       Install ClawCrew agents and configure Telegram"
+    echo "  -u, --uninstall Remove ClawCrew agents, bindings, and workspaces"
+    echo "  -h, --help      Show this help message"
+    echo ""
+    echo "Install will:"
+    echo "  - Add 4 agents: OrcaBot, DesignBot, CodeBot, TestBot"
+    echo "  - Configure Telegram group binding"
+    echo "  - Set required OpenClaw settings"
+    echo "  - Copy workspace folders to ~/.openclaw/"
+    echo ""
+    echo "Uninstall will:"
+    echo "  - Remove ClawCrew agents from config"
+    echo "  - Remove OrcaBot bindings"
+    echo "  - Optionally remove Telegram account"
+    echo "  - Optionally remove workspace folders"
+    echo ""
+    echo "More info: https://github.com/lanxindeng8/clawcrew"
+    exit 0
+fi
+
+# ============================================================
 # UNINSTALL MODE
 # ============================================================
 if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
@@ -135,8 +164,6 @@ fi
 echo "================================================"
 echo "  ClawCrew Setup - Multi-Agent Dev Team"
 echo "================================================"
-echo ""
-echo "Usage: ./setup.sh [--uninstall|-u]"
 echo ""
 echo "This script will:"
 echo "  1. Add ClawCrew agents (OrcaBot, DesignBot, CodeBot, TestBot)"
