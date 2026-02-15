@@ -4,3 +4,8 @@ artifacts/
 __pycache__/
 *.pyc
 .venv/
+
+# Credentials (never commit!)
+.clawcrew.env
+*.env
+.env.*
