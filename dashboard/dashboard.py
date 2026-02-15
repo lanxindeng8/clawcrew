@@ -42,10 +42,13 @@ st.markdown("""
         --accent-yellow: #eab308;
     }
 
-    /* Hide Streamlit branding */
+    /* Hide Streamlit branding but keep sidebar toggle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Keep header visible for sidebar toggle button */
+    header[data-testid="stHeader"] {
+        background: transparent;
+    }
 
     /* Main container */
     .main .block-container {
@@ -610,18 +613,8 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
 def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
-    # Status legend using columns
-    legend_cols = st.columns([1, 1, 1, 1, 2])
-    with legend_cols[0]:
-        st.markdown("🟢 Online")
-    with legend_cols[1]:
-        st.markdown("🟠 In Progress")
-    with legend_cols[2]:
-        st.markdown("🟡 Away")
-    with legend_cols[3]:
-        st.markdown("⚪ Offline")
-
-    st.markdown("---")
+    # Compact legend
+    st.caption("🟢 Online  •  🟠 Running  •  🟡 Away  •  ⚪ Offline")
 
     # Agent cards in a 4-column grid
     cols = st.columns(4)
@@ -629,63 +622,23 @@ def render_agent_floor_native(agents: list):
     for i, agent in enumerate(agents):
         with cols[i % 4]:
             status = agent.get("status", "idle")
-            status_emoji = {
-                "running": "🟠",
-                "idle": "🟢",
-                "completed": "⚪",
-                "error": "🔴",
-                "away": "🟡"
-            }.get(status, "⚪")
-
-            status_label = {
-                "running": "In Progress",
-                "idle": "Online",
-                "completed": "Completed",
-                "error": "Error",
-                "away": "Away"
-            }.get(status, status.title())
-
+            status_emoji = {"running": "🟠", "idle": "🟢", "completed": "⚪", "error": "🔴", "away": "🟡"}.get(status, "⚪")
             is_lead = agent.get("name", "").lower() == "orca"
 
-            # Card container
             with st.container(border=True):
-                # Lead badge
-                if is_lead:
-                    st.caption("🏷️ LEAD")
+                # Compact header: emoji + name + status
+                lead_tag = "👑 " if is_lead else ""
+                st.markdown(f"### {agent.get('emoji', '🤖')} {lead_tag}{agent.get('name', '?').title()} {status_emoji}")
+                st.caption(f"{agent.get('role', 'Agent')} • {agent.get('model', 'claude-3')}")
 
-                # Avatar and name
-                st.markdown(f"<div style='text-align: center; font-size: 3rem;'>{agent.get('emoji', '🤖')}</div>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='text-align: center; margin: 0.5rem 0 0.25rem;'>{agent.get('name', 'Unknown').title()}</h3>", unsafe_allow_html=True)
-                st.markdown(f"<p style='text-align: center; color: #64748b; font-size: 0.875rem; margin: 0;'>{agent.get('role', 'Agent')}</p>", unsafe_allow_html=True)
+                # Stats row
+                c1, c2 = st.columns(2)
+                c1.metric("Tokens", format_tokens(agent.get('tokens', 0)), label_visibility="collapsed")
+                c2.metric("Tasks", agent.get('task_count', 0), label_visibility="collapsed")
 
-                # Status badge
-                st.markdown(f"<div style='text-align: center; margin: 0.75rem 0;'>{status_emoji} <strong>{status_label}</strong></div>", unsafe_allow_html=True)
-
-                # Idle time
-                if status == "running":
-                    st.caption(f"Active: {agent.get('last_active', 'Just now')}")
-                else:
-                    st.caption(f"Idle: {agent.get('idle_time', '3 min')}")
-
-                st.divider()
-
-                # Details
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("**Model**")
-                    st.markdown("**Tokens**")
-                    st.markdown("**Tasks**")
-                with col2:
-                    st.markdown(f"`{agent.get('model', 'claude-3')}`")
-                    st.markdown(f"`{format_tokens(agent.get('tokens', 0))}`")
-                    st.markdown(f"`{agent.get('task_count', 0)}`")
-
-                # Current task
-                if agent.get('current_task'):
-                    st.divider()
-                    st.caption("**Current Task:**")
-                    task_text = agent.get('current_task', '')
-                    st.info(task_text[:80] + ('...' if len(task_text) > 80 else ''))
+                # Current task (only if running)
+                if agent.get('current_task') and status == "running":
+                    st.info(agent.get('current_task', '')[:60] + '...')
 
 
 def render_logs(logs: list):
@@ -790,59 +743,24 @@ with st.sidebar:
 page = st.session_state.page
 
 if page == "home":
-    # Top bar
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        st.markdown("## 🏠 Dashboard")
-    with col2:
-        st.text_input("🔍", placeholder="Search...", label_visibility="collapsed")
-    with col3:
-        st.markdown(f"<div style='text-align: right; padding-top: 0.5rem;'>🔔  👤</div>", unsafe_allow_html=True)
-
-    st.divider()
-
-    # Stats row
+    # Compact header with stats
     stats = fetch_api("/api/stats", {})
     tokens = fetch_api("/api/tokens", {})
 
-    col1, col2, col3, col4 = st.columns(4)
-
+    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
     with col1:
-        st.metric(
-            label="Total Tasks",
-            value=stats.get("total_tasks", 0),
-            delta=None
-        )
+        st.markdown("#### 📋 Create email validation function")
+        st.caption("Task ID: 20240214-153042 • Code phase")
     with col2:
-        st.metric(
-            label="Agents Running",
-            value=stats.get("agents_running", 2),
-            delta=None
-        )
+        st.metric("Tasks", stats.get("total_tasks", 0))
     with col3:
-        st.metric(
-            label="Total Tokens",
-            value=format_tokens(tokens.get("total", 15420)),
-            delta=None
-        )
+        st.metric("Running", stats.get("agents_running", 2))
     with col4:
-        st.metric(
-            label="Log Entries",
-            value=stats.get("log_count", 8),
-            delta=None
-        )
+        st.metric("Tokens", format_tokens(tokens.get("total", 15420)))
+    with col5:
+        st.progress(0.6)
 
-    st.divider()
-
-    # Current task info
-    st.markdown("### 📋 Current Task: Create email validation function")
-    st.caption("Task ID: 20240214-153042 • Started 5 minutes ago")
-    st.progress(0.6, text="Code phase in progress...")
-
-    st.divider()
-
-    # Agent Floor - Virtual Office Style
-    st.markdown("### 🤖 Agent Team")
+    # Agent Team
 
     # Get agents with extended mock data
     agents = fetch_api("/api/agents", [])
