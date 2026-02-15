@@ -454,6 +454,18 @@ fi
 mkdir -p "$OPENCLAW_DIR/artifacts"
 echo "  Created artifacts/"
 
+# Install Python dependencies
+echo "  Installing Python dependencies..."
+if command -v pip3 &> /dev/null; then
+    pip3 install --quiet typer httpx 2>/dev/null || pip3 install typer httpx
+    echo "  Installed typer, httpx"
+elif command -v pip &> /dev/null; then
+    pip install --quiet typer httpx 2>/dev/null || pip install typer httpx
+    echo "  Installed typer, httpx"
+else
+    echo "  ⚠️  pip not found. Please install manually: pip install typer httpx"
+fi
+
 # Verify settings
 echo "[5/5] Verifying configuration..."
 VERIFY_ERRORS=0
