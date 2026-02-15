@@ -52,8 +52,15 @@ When a task involves a GitHub URL or references an external repository:
 ### Step 1: Analyze the Repository
 
 ```bash
+# Analyze default branch
 ~/.openclaw/bin/agent-cli.py summarize-repo \
   --url https://github.com/user/repo \
+  --task-id <task_id>
+
+# Or analyze a specific branch
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --url https://github.com/user/repo \
+  --branch feature-branch \
   --task-id <task_id>
 ```
 

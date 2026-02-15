@@ -5,6 +5,7 @@ Functions for cloning, analyzing, and summarizing GitHub repositories.
 Used by the summarize-repo command in agent-cli.py.
 """
 
+import os
 import re
 import subprocess
 import tempfile
@@ -59,6 +60,26 @@ CONFIG_FILES = [
 # Functions
 # =============================================================================
 
+def get_github_token(provided_pat: str = None) -> str:
+    """
+    Get GitHub PAT from various sources.
+
+    Priority:
+        1. Provided PAT (--pat flag)
+        2. GITHUB_PAT environment variable
+        3. GH_TOKEN environment variable (gh CLI compatible)
+
+    Args:
+        provided_pat: PAT explicitly provided via CLI
+
+    Returns:
+        PAT string or None if not found
+    """
+    if provided_pat:
+        return provided_pat
+    return os.environ.get("GITHUB_PAT") or os.environ.get("GH_TOKEN")
+
+
 def parse_github_url(url: str) -> tuple:
     """
     Parse GitHub URL into components.
@@ -92,20 +113,33 @@ def parse_github_url(url: str) -> tuple:
     raise ValueError(f"Unrecognized GitHub URL format: {url}")
 
 
-def clone_repository(clone_url: str, target_dir: Path) -> bool:
+def clone_repository(clone_url: str, target_dir: Path, branch: str = None, pat: str = None) -> bool:
     """
     Clone a repository with shallow depth.
 
     Args:
         clone_url: Git clone URL
         target_dir: Directory to clone into
+        branch: Specific branch to clone (default: repo's default branch)
+        pat: GitHub Personal Access Token for private repos
 
     Returns:
         True if successful, False otherwise
     """
     try:
+        # Insert PAT into URL for authentication
+        # https://github.com/... -> https://<pat>@github.com/...
+        auth_url = clone_url
+        if pat and clone_url.startswith("https://github.com/"):
+            auth_url = clone_url.replace("https://github.com/", f"https://{pat}@github.com/")
+
+        cmd = ["git", "clone", "--depth", "1"]
+        if branch:
+            cmd.extend(["--branch", branch])
+        cmd.extend([auth_url, str(target_dir)])
+
         result = subprocess.run(
-            ["git", "clone", "--depth", "1", clone_url, str(target_dir)],
+            cmd,
             capture_output=True,
             text=True,
             timeout=120,

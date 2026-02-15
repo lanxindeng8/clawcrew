@@ -42,6 +42,7 @@ from github_utils import (
     clone_repository,
     find_key_files,
     build_repo_context,
+    get_github_token,
 )
 
 # Enable -h as help shortcut
@@ -437,6 +438,8 @@ def clear_memory(
 def summarize_repo(
     url: Optional[str] = typer.Option(None, "--url", "-u", help="GitHub repository URL"),
     path: Optional[str] = typer.Option(None, "--path", "-p", help="Local repository path"),
+    branch: Optional[str] = typer.Option(None, "--branch", "-b", help="Specific branch to analyze"),
+    pat: Optional[str] = typer.Option(None, "--pat", help="GitHub PAT for private repos (or set GITHUB_PAT env)"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
     task_id: Optional[str] = typer.Option(None, "--task-id", help="Task ID for tracking"),
     keep_clone: bool = typer.Option(False, "--keep-clone", help="Don't delete cloned repo (for debugging)"),
@@ -453,8 +456,14 @@ def summarize_repo(
         # Summarize a GitHub repo
         ./bin/agent-cli.py summarize-repo --url https://github.com/user/repo
 
-        # Summarize with specific output
-        ./bin/agent-cli.py summarize-repo -u https://github.com/user/repo -o summary.md
+        # Summarize a specific branch
+        ./bin/agent-cli.py summarize-repo -u https://github.com/user/repo -b develop
+
+        # Summarize a private repo (PAT via flag)
+        ./bin/agent-cli.py summarize-repo -u https://github.com/user/private-repo --pat ghp_xxx
+
+        # Summarize a private repo (PAT via env)
+        GITHUB_PAT=ghp_xxx ./bin/agent-cli.py summarize-repo -u https://github.com/user/private-repo
 
         # Summarize local directory
         ./bin/agent-cli.py summarize-repo --path /path/to/repo
@@ -485,16 +494,28 @@ def summarize_repo(
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1)
 
+            # Get PAT (from --pat flag or environment)
+            github_token = get_github_token(pat)
+
+            branch_info = f" (branch: {branch})" if branch else ""
+            auth_info = " [authenticated]" if github_token else ""
             if verbose:
-                typer.echo(f"[REPO] Cloning {owner}/{repo_name}...")
+                typer.echo(f"[REPO] Cloning {owner}/{repo_name}{branch_info}{auth_info}...")
 
             # Create temp directory
             temp_dir = Path(tempfile.mkdtemp(prefix="clawcrew-repo-"))
             repo_path = temp_dir / repo_name
 
             # Clone repository
-            if not clone_repository(clone_url, repo_path):
-                typer.echo("Error: Failed to clone repository. Is it public?", err=True)
+            if not clone_repository(clone_url, repo_path, branch, github_token):
+                error_msg = "Error: Failed to clone repository."
+                if branch:
+                    error_msg += f" Branch '{branch}' may not exist."
+                elif not github_token:
+                    error_msg += " Is it public? Use --pat for private repos."
+                else:
+                    error_msg += " Check your PAT permissions."
+                typer.echo(error_msg, err=True)
                 raise typer.Exit(1)
 
             if verbose:
@@ -533,6 +554,7 @@ def summarize_repo(
 
         # Build prompt for repo agent
         source = url if url else str(repo_path)
+        branch_line = f"\n**Branch:** {branch}" if branch else ""
         prompt = f"""## Repository Analysis Task
 
 Task ID: {task_id}
@@ -540,7 +562,7 @@ Task ID: {task_id}
 Analyze this repository and provide a comprehensive summary.
 
 **Source:** {source}
-**Repository Name:** {repo_name}
+**Repository Name:** {repo_name}{branch_line}
 
 {context}
 
@@ -588,6 +610,445 @@ Format your analysis between these markers:
             if verbose:
                 typer.echo(f"[REPO] Cleaning up: {temp_dir}")
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.command("read-issue")
+def read_issue(
+    repo: str = typer.Option(..., "--repo", "-r", help="Repository (owner/repo format)"),
+    issue: int = typer.Option(..., "--issue", "-n", help="Issue number"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    with_comments: bool = typer.Option(False, "--comments", "-c", help="Include issue comments"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Read a GitHub issue and format it for agent context.
+
+    Uses the gh CLI to fetch issue details. Requires gh to be installed
+    and authenticated.
+
+    Examples:
+
+        # Read an issue
+        ./bin/agent-cli.py read-issue -r user/repo -n 123
+
+        # Read with comments
+        ./bin/agent-cli.py read-issue -r user/repo -n 123 --comments
+
+        # Save to file for agent context
+        ./bin/agent-cli.py read-issue -r user/repo -n 123 -o issue.md
+    """
+    if verbose:
+        typer.echo(f"[ISSUE] Fetching {repo}#{issue}...")
+
+    try:
+        # Fetch issue details
+        result = subprocess.run(
+            ["gh", "issue", "view", str(issue), "--repo", repo, "--json",
+             "title,body,state,author,labels,assignees,createdAt,url"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            typer.echo(f"Error: Failed to fetch issue. {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        issue_data = json.loads(result.stdout)
+
+        # Build formatted output
+        labels = ", ".join([l["name"] for l in issue_data.get("labels", [])]) or "None"
+        assignees = ", ".join([a["login"] for a in issue_data.get("assignees", [])]) or "None"
+
+        content = f"""# Issue #{issue}: {issue_data['title']}
+
+**Repository:** {repo}
+**URL:** {issue_data['url']}
+**State:** {issue_data['state']}
+**Author:** {issue_data['author']['login']}
+**Labels:** {labels}
+**Assignees:** {assignees}
+**Created:** {issue_data['createdAt']}
+
+## Description
+
+{issue_data.get('body', 'No description provided.')}
+"""
+
+        # Fetch comments if requested
+        if with_comments:
+            if verbose:
+                typer.echo("[ISSUE] Fetching comments...")
+
+            comments_result = subprocess.run(
+                ["gh", "issue", "view", str(issue), "--repo", repo, "--json", "comments"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if comments_result.returncode == 0:
+                comments_data = json.loads(comments_result.stdout)
+                comments = comments_data.get("comments", [])
+
+                if comments:
+                    content += "\n## Comments\n\n"
+                    for i, comment in enumerate(comments, 1):
+                        content += f"### Comment {i} by {comment['author']['login']} ({comment['createdAt']})\n\n"
+                        content += f"{comment['body']}\n\n"
+
+        # Output
+        if output:
+            out_path = Path(output)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(content, encoding="utf-8")
+            typer.echo(f"[ISSUE] Saved to: {output}")
+        else:
+            typer.echo(content)
+
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: Request timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: gh CLI not found. Install it from https://cli.github.com/", err=True)
+        raise typer.Exit(1)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Failed to parse response: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("list-issues")
+def list_issues(
+    repo: str = typer.Option(..., "--repo", "-r", help="Repository (owner/repo format)"),
+    state: str = typer.Option("open", "--state", "-s", help="Filter by state: open, closed, all"),
+    label: Optional[str] = typer.Option(None, "--label", "-l", help="Filter by label"),
+    limit: int = typer.Option(10, "--limit", "-n", help="Number of issues to list"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    List GitHub issues from a repository.
+
+    Uses the gh CLI to fetch issues. Requires gh to be installed
+    and authenticated.
+
+    Examples:
+
+        # List open issues
+        ./bin/agent-cli.py list-issues -r user/repo
+
+        # List closed issues
+        ./bin/agent-cli.py list-issues -r user/repo -s closed
+
+        # Filter by label
+        ./bin/agent-cli.py list-issues -r user/repo -l bug
+    """
+    if verbose:
+        typer.echo(f"[ISSUE] Listing issues from {repo}...")
+
+    try:
+        cmd = ["gh", "issue", "list", "--repo", repo, "--state", state,
+               "--limit", str(limit), "--json", "number,title,state,author,labels,createdAt"]
+
+        if label:
+            cmd.extend(["--label", label])
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0:
+            typer.echo(f"Error: Failed to list issues. {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        issues = json.loads(result.stdout)
+
+        if not issues:
+            typer.echo(f"No {state} issues found in {repo}")
+            return
+
+        typer.echo(f"\n{'#':<6} {'State':<8} {'Title':<50} {'Labels':<20}")
+        typer.echo("-" * 90)
+
+        for issue in issues:
+            labels = ", ".join([l["name"] for l in issue.get("labels", [])])[:20]
+            title = issue["title"][:48] + ".." if len(issue["title"]) > 50 else issue["title"]
+            typer.echo(f"{issue['number']:<6} {issue['state']:<8} {title:<50} {labels:<20}")
+
+        typer.echo(f"\nTotal: {len(issues)} issues")
+
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: Request timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: gh CLI not found. Install it from https://cli.github.com/", err=True)
+        raise typer.Exit(1)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Failed to parse response: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("create-pr")
+def create_pr(
+    repo: str = typer.Option(..., "--repo", "-r", help="Repository (owner/repo format)"),
+    title: str = typer.Option(..., "--title", "-t", help="PR title"),
+    body: Optional[str] = typer.Option(None, "--body", "-b", help="PR body/description"),
+    body_file: Optional[str] = typer.Option(None, "--body-file", "-f", help="File containing PR body"),
+    head: str = typer.Option(..., "--head", "-H", help="Branch containing changes"),
+    base: str = typer.Option("main", "--base", "-B", help="Branch to merge into (default: main)"),
+    draft: bool = typer.Option(False, "--draft", "-d", help="Create as draft PR"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Create a GitHub Pull Request.
+
+    Uses the gh CLI to create PRs. Requires gh to be installed
+    and authenticated with push access.
+
+    Examples:
+
+        # Create a PR
+        ./bin/agent-cli.py create-pr -r user/repo -t "Add feature X" -H feature-branch
+
+        # Create with description
+        ./bin/agent-cli.py create-pr -r user/repo -t "Fix bug" -b "Fixes #123" -H fix-branch
+
+        # Create from body file
+        ./bin/agent-cli.py create-pr -r user/repo -t "Big feature" -f pr_description.md -H feature-branch
+
+        # Create draft PR
+        ./bin/agent-cli.py create-pr -r user/repo -t "WIP: Feature" -H wip-branch --draft
+    """
+    if verbose:
+        typer.echo(f"[PR] Creating PR: {head} -> {base} in {repo}...")
+
+    # Get body content
+    pr_body = body or ""
+    if body_file:
+        body_path = Path(body_file)
+        if body_path.exists():
+            pr_body = body_path.read_text(encoding="utf-8")
+        else:
+            typer.echo(f"Error: Body file not found: {body_file}", err=True)
+            raise typer.Exit(1)
+
+    try:
+        cmd = [
+            "gh", "pr", "create",
+            "--repo", repo,
+            "--title", title,
+            "--head", head,
+            "--base", base,
+        ]
+
+        if pr_body:
+            cmd.extend(["--body", pr_body])
+
+        if draft:
+            cmd.append("--draft")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+        if result.returncode != 0:
+            typer.echo(f"Error: Failed to create PR. {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        # gh pr create outputs the PR URL
+        pr_url = result.stdout.strip()
+        typer.echo(f"[PR] Created: {pr_url}")
+
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: Request timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: gh CLI not found. Install it from https://cli.github.com/", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("list-prs")
+def list_prs(
+    repo: str = typer.Option(..., "--repo", "-r", help="Repository (owner/repo format)"),
+    state: str = typer.Option("open", "--state", "-s", help="Filter by state: open, closed, merged, all"),
+    limit: int = typer.Option(10, "--limit", "-n", help="Number of PRs to list"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    List GitHub Pull Requests from a repository.
+
+    Uses the gh CLI to fetch PRs. Requires gh to be installed
+    and authenticated.
+
+    Examples:
+
+        # List open PRs
+        ./bin/agent-cli.py list-prs -r user/repo
+
+        # List merged PRs
+        ./bin/agent-cli.py list-prs -r user/repo -s merged
+    """
+    if verbose:
+        typer.echo(f"[PR] Listing PRs from {repo}...")
+
+    try:
+        cmd = ["gh", "pr", "list", "--repo", repo, "--state", state,
+               "--limit", str(limit), "--json", "number,title,state,author,headRefName,baseRefName,createdAt"]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0:
+            typer.echo(f"Error: Failed to list PRs. {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        prs = json.loads(result.stdout)
+
+        if not prs:
+            typer.echo(f"No {state} PRs found in {repo}")
+            return
+
+        typer.echo(f"\n{'#':<6} {'State':<8} {'Title':<40} {'Branch':<25}")
+        typer.echo("-" * 85)
+
+        for pr in prs:
+            title = pr["title"][:38] + ".." if len(pr["title"]) > 40 else pr["title"]
+            branch = pr["headRefName"][:23] + ".." if len(pr["headRefName"]) > 25 else pr["headRefName"]
+            typer.echo(f"{pr['number']:<6} {pr['state']:<8} {title:<40} {branch:<25}")
+
+        typer.echo(f"\nTotal: {len(prs)} PRs")
+
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: Request timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: gh CLI not found. Install it from https://cli.github.com/", err=True)
+        raise typer.Exit(1)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Failed to parse response: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("read-pr")
+def read_pr(
+    repo: str = typer.Option(..., "--repo", "-r", help="Repository (owner/repo format)"),
+    pr_number: int = typer.Option(..., "--pr", "-n", help="PR number"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    with_comments: bool = typer.Option(False, "--comments", "-c", help="Include PR comments"),
+    with_diff: bool = typer.Option(False, "--diff", "-d", help="Include PR diff"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Read a GitHub Pull Request and format it for agent context.
+
+    Uses the gh CLI to fetch PR details. Requires gh to be installed
+    and authenticated.
+
+    Examples:
+
+        # Read a PR
+        ./bin/agent-cli.py read-pr -r user/repo -n 123
+
+        # Read with comments and diff
+        ./bin/agent-cli.py read-pr -r user/repo -n 123 --comments --diff
+
+        # Save to file for agent context
+        ./bin/agent-cli.py read-pr -r user/repo -n 123 -o pr.md
+    """
+    if verbose:
+        typer.echo(f"[PR] Fetching {repo}#{pr_number}...")
+
+    try:
+        # Fetch PR details
+        result = subprocess.run(
+            ["gh", "pr", "view", str(pr_number), "--repo", repo, "--json",
+             "title,body,state,author,labels,assignees,headRefName,baseRefName,createdAt,url,mergeable,additions,deletions,changedFiles"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            typer.echo(f"Error: Failed to fetch PR. {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        pr_data = json.loads(result.stdout)
+
+        # Build formatted output
+        labels = ", ".join([l["name"] for l in pr_data.get("labels", [])]) or "None"
+        assignees = ", ".join([a["login"] for a in pr_data.get("assignees", [])]) or "None"
+
+        content = f"""# PR #{pr_number}: {pr_data['title']}
+
+**Repository:** {repo}
+**URL:** {pr_data['url']}
+**State:** {pr_data['state']}
+**Author:** {pr_data['author']['login']}
+**Branch:** {pr_data['headRefName']} → {pr_data['baseRefName']}
+**Labels:** {labels}
+**Assignees:** {assignees}
+**Created:** {pr_data['createdAt']}
+**Mergeable:** {pr_data.get('mergeable', 'Unknown')}
+**Changes:** +{pr_data.get('additions', 0)} -{pr_data.get('deletions', 0)} ({pr_data.get('changedFiles', 0)} files)
+
+## Description
+
+{pr_data.get('body', 'No description provided.')}
+"""
+
+        # Fetch comments if requested
+        if with_comments:
+            if verbose:
+                typer.echo("[PR] Fetching comments...")
+
+            comments_result = subprocess.run(
+                ["gh", "pr", "view", str(pr_number), "--repo", repo, "--json", "comments"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if comments_result.returncode == 0:
+                comments_data = json.loads(comments_result.stdout)
+                comments = comments_data.get("comments", [])
+
+                if comments:
+                    content += "\n## Comments\n\n"
+                    for i, comment in enumerate(comments, 1):
+                        content += f"### Comment {i} by {comment['author']['login']} ({comment['createdAt']})\n\n"
+                        content += f"{comment['body']}\n\n"
+
+        # Fetch diff if requested
+        if with_diff:
+            if verbose:
+                typer.echo("[PR] Fetching diff...")
+
+            diff_result = subprocess.run(
+                ["gh", "pr", "diff", str(pr_number), "--repo", repo],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+            if diff_result.returncode == 0:
+                diff = diff_result.stdout
+                # Truncate very large diffs
+                if len(diff) > 50000:
+                    diff = diff[:50000] + "\n\n[Diff truncated due to size]"
+                content += f"\n## Diff\n\n```diff\n{diff}\n```\n"
+
+        # Output
+        if output:
+            out_path = Path(output)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(content, encoding="utf-8")
+            typer.echo(f"[PR] Saved to: {output}")
+        else:
+            typer.echo(content)
+
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: Request timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: gh CLI not found. Install it from https://cli.github.com/", err=True)
+        raise typer.Exit(1)
+    except json.JSONDecodeError as e:
+        typer.echo(f"Error: Failed to parse response: {e}", err=True)
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

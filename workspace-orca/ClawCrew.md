@@ -106,6 +106,8 @@ Analyze GitHub repositories or local directories to understand their architectur
 |------|------|-------------|
 | `-u` | `--url` | GitHub repository URL |
 | `-p` | `--path` | Local repository path |
+| `-b` | `--branch` | Specific branch to analyze |
+| | `--pat` | GitHub PAT for private repos (or set GITHUB_PAT env) |
 | `-o` | `--output` | Output file path |
 | `--task-id` | | Task ID for tracking |
 | `--keep-clone` | | Don't delete temp clone |
@@ -117,6 +119,21 @@ Analyze GitHub repositories or local directories to understand their architectur
 # Summarize GitHub repo
 ~/.openclaw/bin/agent-cli.py summarize-repo \
   --url https://github.com/pallets/flask
+
+# Summarize a specific branch
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  -u https://github.com/user/repo \
+  -b develop
+
+# Summarize private repo (PAT via flag)
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  -u https://github.com/user/private-repo \
+  --pat ghp_xxxxxxxxxxxx
+
+# Summarize private repo (PAT via environment)
+export GITHUB_PAT=ghp_xxxxxxxxxxxx
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  -u https://github.com/user/private-repo
 
 # Summarize local project
 ~/.openclaw/bin/agent-cli.py summarize-repo \
@@ -151,6 +168,139 @@ Pass repo summary as context for development tasks:
   -t "Design a caching middleware for this API" \
   -c ~/.openclaw/artifacts/task-001/repo_summary.md \
   -o ~/.openclaw/artifacts/task-001/design.md
+```
+
+## Issue Management
+
+Read and list GitHub issues to use as context for development tasks.
+Requires the `gh` CLI to be installed and authenticated.
+
+### List Issues
+
+```bash
+~/.openclaw/bin/agent-cli.py list-issues --repo user/repo
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-r` | `--repo` | Repository (owner/repo format) |
+| `-s` | `--state` | Filter by state: open, closed, all (default: open) |
+| `-l` | `--label` | Filter by label |
+| `-n` | `--limit` | Number of issues to list (default: 10) |
+
+### Read Issue
+
+```bash
+~/.openclaw/bin/agent-cli.py read-issue --repo user/repo --issue 123
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-r` | `--repo` | Repository (owner/repo format) |
+| `-n` | `--issue` | Issue number |
+| `-c` | `--comments` | Include issue comments |
+| `-o` | `--output` | Output file path |
+
+### Examples
+
+```bash
+# List open issues
+~/.openclaw/bin/agent-cli.py list-issues -r pallets/flask
+
+# List bugs only
+~/.openclaw/bin/agent-cli.py list-issues -r pallets/flask -l bug
+
+# Read specific issue with comments
+~/.openclaw/bin/agent-cli.py read-issue -r pallets/flask -n 5432 --comments
+
+# Save issue as context for agent
+~/.openclaw/bin/agent-cli.py read-issue -r user/repo -n 42 -o issue.md
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design a fix for this issue" \
+  -c issue.md \
+  -o fix_design.md
+```
+
+## Pull Request Management
+
+Create, list, and read GitHub Pull Requests.
+Requires the `gh` CLI to be installed and authenticated.
+
+### Create PR
+
+```bash
+~/.openclaw/bin/agent-cli.py create-pr --repo user/repo --title "Add feature" --head feature-branch
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-r` | `--repo` | Repository (owner/repo format) |
+| `-t` | `--title` | PR title |
+| `-b` | `--body` | PR body/description |
+| `-f` | `--body-file` | File containing PR body |
+| `-H` | `--head` | Branch containing changes |
+| `-B` | `--base` | Branch to merge into (default: main) |
+| `-d` | `--draft` | Create as draft PR |
+
+### List PRs
+
+```bash
+~/.openclaw/bin/agent-cli.py list-prs --repo user/repo
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-r` | `--repo` | Repository (owner/repo format) |
+| `-s` | `--state` | Filter by state: open, closed, merged, all |
+| `-n` | `--limit` | Number of PRs to list (default: 10) |
+
+### Read PR
+
+```bash
+~/.openclaw/bin/agent-cli.py read-pr --repo user/repo --pr 123
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-r` | `--repo` | Repository (owner/repo format) |
+| `-n` | `--pr` | PR number |
+| `-c` | `--comments` | Include PR comments |
+| `-d` | `--diff` | Include PR diff |
+| `-o` | `--output` | Output file path |
+
+### Examples
+
+```bash
+# Create a PR
+~/.openclaw/bin/agent-cli.py create-pr \
+  -r user/repo \
+  -t "Add email validation feature" \
+  -b "Implements email validation as per design spec" \
+  -H feature/email-validator
+
+# Create PR with description from file
+~/.openclaw/bin/agent-cli.py create-pr \
+  -r user/repo \
+  -t "Big feature" \
+  -f ~/.openclaw/artifacts/task-001/pr_description.md \
+  -H feature-branch
+
+# List open PRs
+~/.openclaw/bin/agent-cli.py list-prs -r pallets/flask
+
+# Read PR with diff
+~/.openclaw/bin/agent-cli.py read-pr -r user/repo -n 42 --diff
+
+# Full workflow: Issue -> Design -> Code -> PR
+~/.openclaw/bin/agent-cli.py read-issue -r user/repo -n 42 -o issue.md
+~/.openclaw/bin/agent-cli.py run -a design -t "Design fix for issue" -c issue.md -o design.md
+~/.openclaw/bin/agent-cli.py run -a code -t "Implement fix" -c design.md -o fix.py
+~/.openclaw/bin/agent-cli.py create-pr -r user/repo -t "Fix #42: Description" -H fix-branch
 ```
 
 ## Workflow Example
