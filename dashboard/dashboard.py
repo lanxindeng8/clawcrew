@@ -607,46 +607,85 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
     return html
 
 
-def render_status_legend():
-    """Render the status legend."""
-    html = '''
-    <div class="status-legend">
-        <div class="legend-item">
-            <span class="legend-dot online"></span>
-            Online
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot running"></span>
-            In Progress
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot away"></span>
-            Away
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot offline"></span>
-            Offline
-        </div>
-    </div>
-    '''
-    st.markdown(html, unsafe_allow_html=True)
+def render_agent_floor_native(agents: list):
+    """Render the Virtual Office agent floor using native Streamlit components."""
 
+    # Status legend using columns
+    legend_cols = st.columns([1, 1, 1, 1, 2])
+    with legend_cols[0]:
+        st.markdown("🟢 Online")
+    with legend_cols[1]:
+        st.markdown("🟠 In Progress")
+    with legend_cols[2]:
+        st.markdown("🟡 Away")
+    with legend_cols[3]:
+        st.markdown("⚪ Offline")
 
-def render_agent_floor(agents: list):
-    """Render the Virtual Office agent floor."""
+    st.markdown("---")
 
-    # Status legend
-    render_status_legend()
+    # Agent cards in a 4-column grid
+    cols = st.columns(4)
 
-    # Agent floor grid
-    html = '<div class="agent-floor">'
+    for i, agent in enumerate(agents):
+        with cols[i % 4]:
+            status = agent.get("status", "idle")
+            status_emoji = {
+                "running": "🟠",
+                "idle": "🟢",
+                "completed": "⚪",
+                "error": "🔴",
+                "away": "🟡"
+            }.get(status, "⚪")
 
-    for agent in agents:
-        html += render_virtual_office_agent(agent, show_details=True)
+            status_label = {
+                "running": "In Progress",
+                "idle": "Online",
+                "completed": "Completed",
+                "error": "Error",
+                "away": "Away"
+            }.get(status, status.title())
 
-    html += '</div>'
+            is_lead = agent.get("name", "").lower() == "orca"
 
-    st.markdown(html, unsafe_allow_html=True)
+            # Card container
+            with st.container(border=True):
+                # Lead badge
+                if is_lead:
+                    st.caption("🏷️ LEAD")
+
+                # Avatar and name
+                st.markdown(f"<div style='text-align: center; font-size: 3rem;'>{agent.get('emoji', '🤖')}</div>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='text-align: center; margin: 0.5rem 0 0.25rem;'>{agent.get('name', 'Unknown').title()}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center; color: #64748b; font-size: 0.875rem; margin: 0;'>{agent.get('role', 'Agent')}</p>", unsafe_allow_html=True)
+
+                # Status badge
+                st.markdown(f"<div style='text-align: center; margin: 0.75rem 0;'>{status_emoji} <strong>{status_label}</strong></div>", unsafe_allow_html=True)
+
+                # Idle time
+                if status == "running":
+                    st.caption(f"Active: {agent.get('last_active', 'Just now')}")
+                else:
+                    st.caption(f"Idle: {agent.get('idle_time', '3 min')}")
+
+                st.divider()
+
+                # Details
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**Model**")
+                    st.markdown("**Tokens**")
+                    st.markdown("**Tasks**")
+                with col2:
+                    st.markdown(f"`{agent.get('model', 'claude-3')}`")
+                    st.markdown(f"`{format_tokens(agent.get('tokens', 0))}`")
+                    st.markdown(f"`{agent.get('task_count', 0)}`")
+
+                # Current task
+                if agent.get('current_task'):
+                    st.divider()
+                    st.caption("**Current Task:**")
+                    task_text = agent.get('current_task', '')
+                    st.info(task_text[:80] + ('...' if len(task_text) > 80 else ''))
 
 
 def render_logs(logs: list):
@@ -859,7 +898,7 @@ if page == "home":
             },
         ]
 
-    render_agent_floor(agents)
+    render_agent_floor_native(agents)
 
     st.divider()
 
@@ -975,7 +1014,7 @@ elif page == "agents":
             },
         ]
 
-    render_agent_floor(agents)
+    render_agent_floor_native(agents)
 
     st.divider()
 
