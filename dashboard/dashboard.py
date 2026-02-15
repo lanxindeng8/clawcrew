@@ -613,8 +613,34 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
 def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
-    # Compact legend
-    st.caption("🟢 Online  •  🟠 Running  •  🟡 Away  •  ⚪ Offline")
+    # Office floor container with background
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #f0f4f8 100%);
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        border: 1px solid #cbd5e1;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        position: relative;
+    ">
+        <div style="
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 4px 20px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        ">
+            🟢 Online  •  🟠 Running  •  🟡 Away  •  ⚪ Offline
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Agent cards in a 4-column grid
     cols = st.columns(4)
@@ -623,22 +649,96 @@ def render_agent_floor_native(agents: list):
         with cols[i % 4]:
             status = agent.get("status", "idle")
             status_emoji = {"running": "🟠", "idle": "🟢", "completed": "⚪", "error": "🔴", "away": "🟡"}.get(status, "⚪")
+            status_label = {"running": "In Progress", "idle": "Online", "completed": "Completed", "error": "Error", "away": "Away"}.get(status, status.title())
             is_lead = agent.get("name", "").lower() == "orca"
 
             with st.container(border=True):
-                # Compact header: emoji + name + status
-                lead_tag = "👑 " if is_lead else ""
-                st.markdown(f"### {agent.get('emoji', '🤖')} {lead_tag}{agent.get('name', '?').title()} {status_emoji}")
-                st.caption(f"{agent.get('role', 'Agent')} • {agent.get('model', 'claude-3')}")
+                # Lead badge
+                if is_lead:
+                    st.markdown('<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">👑 LEAD</span>', unsafe_allow_html=True)
 
-                # Stats row
-                c1, c2 = st.columns(2)
-                c1.metric("Tokens", format_tokens(agent.get('tokens', 0)), label_visibility="collapsed")
-                c2.metric("Tasks", agent.get('task_count', 0), label_visibility="collapsed")
+                # Avatar centered
+                st.markdown(f"""
+                <div style="text-align:center;margin:0.5rem 0;">
+                    <div style="
+                        width:70px;height:70px;
+                        margin:0 auto;
+                        background:linear-gradient(135deg,#f1f5f9,#e2e8f0);
+                        border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:2.5rem;
+                        border:3px solid white;
+                        box-shadow:0 2px 8px rgba(0,0,0,0.1);
+                        position:relative;
+                    ">
+                        {agent.get('emoji', '🤖')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                # Current task (only if running)
-                if agent.get('current_task') and status == "running":
-                    st.info(agent.get('current_task', '')[:60] + '...')
+                # Name and role
+                st.markdown(f"<h4 style='text-align:center;margin:0.25rem 0;'>{agent.get('name', '?').title()}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align:center;color:#64748b;font-size:0.8rem;margin:0;'>{agent.get('role', 'Agent')}</p>", unsafe_allow_html=True)
+
+                # Status badge
+                status_colors = {
+                    "running": ("background:#ffedd5;color:#c2410c;", "🟠"),
+                    "idle": ("background:#dcfce7;color:#15803d;", "🟢"),
+                    "completed": ("background:#f1f5f9;color:#64748b;", "⚪"),
+                    "error": ("background:#fee2e2;color:#b91c1c;", "🔴"),
+                }
+                style, icon = status_colors.get(status, ("background:#f1f5f9;color:#64748b;", "⚪"))
+                st.markdown(f"""
+                <div style="text-align:center;margin:0.75rem 0;">
+                    <span style="{style}padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:500;">
+                        {icon} {status_label}
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Idle/Active time
+                if status == "running":
+                    st.caption(f"🕐 Active: {agent.get('last_active', 'Just now')}")
+                else:
+                    st.caption(f"🕐 Idle: {agent.get('idle_time', '3 min')}")
+
+                st.divider()
+
+                # Details section
+                st.markdown(f"""
+                <div style="font-size:0.8rem;">
+                    <div style="display:flex;justify-content:space-between;padding:3px 0;">
+                        <span style="color:#64748b;">Model</span>
+                        <span style="font-weight:600;">{agent.get('model', 'claude-3')}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:3px 0;">
+                        <span style="color:#64748b;">Tokens</span>
+                        <span style="font-weight:600;">{format_tokens(agent.get('tokens', 0))}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:3px 0;">
+                        <span style="color:#64748b;">Tasks</span>
+                        <span style="font-weight:600;">{agent.get('task_count', 0)}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Current task (if any)
+                if agent.get('current_task'):
+                    task_text = agent.get('current_task', '')
+                    truncated = task_text[:50] + '...' if len(task_text) > 50 else task_text
+                    st.markdown(f"""
+                    <div style="
+                        background:#f8fafc;
+                        border-radius:8px;
+                        padding:8px;
+                        margin-top:8px;
+                        font-size:0.75rem;
+                        border-left:3px solid #3b82f6;
+                    ">
+                        <strong style="color:#1e293b;">Current Task:</strong><br/>
+                        <span style="color:#64748b;">{truncated}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 
 def render_logs(logs: list):
@@ -743,24 +843,19 @@ with st.sidebar:
 page = st.session_state.page
 
 if page == "home":
-    # Compact header with stats
+    # Top stats row only
     stats = fetch_api("/api/stats", {})
     tokens = fetch_api("/api/tokens", {})
 
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
-    with col1:
-        st.markdown("#### 📋 Create email validation function")
-        st.caption("Task ID: 20240214-153042 • Code phase")
-    with col2:
-        st.metric("Tasks", stats.get("total_tasks", 0))
-    with col3:
-        st.metric("Running", stats.get("agents_running", 2))
-    with col4:
-        st.metric("Tokens", format_tokens(tokens.get("total", 15420)))
-    with col5:
-        st.progress(0.6)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Tasks", stats.get("total_tasks", 3))
+    col2.metric("Agents Running", stats.get("agents_running", 2))
+    col3.metric("Total Tokens", format_tokens(tokens.get("total", 15420)))
+    col4.metric("Success Rate", "94%")
 
-    # Agent Team
+    st.divider()
+
+    # Agent Team - Visual Focus
 
     # Get agents with extended mock data
     agents = fetch_api("/api/agents", [])
@@ -817,6 +912,27 @@ if page == "home":
         ]
 
     render_agent_floor_native(agents)
+
+    # Current Task Section (below agent cards)
+    st.markdown("""
+    <div style="
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    ">
+        <div style="display:flex;align-items:center;gap:1rem;">
+            <span style="font-size:1.5rem;">📋</span>
+            <div style="flex:1;">
+                <strong style="font-size:1rem;">Create email validation function</strong>
+                <div style="color:#64748b;font-size:0.8rem;">Task ID: 20240214-153042 • Started 5 min ago • Code phase</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.progress(0.6, text="Orca → Design ✓ → Code (running) → Test")
 
     st.divider()
 
