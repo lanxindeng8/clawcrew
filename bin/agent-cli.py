@@ -29,7 +29,7 @@ More info: https://github.com/lanxindeng8/clawcrew
 import typer
 import json
 import uuid
-import httpx
+import subprocess
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -58,34 +58,9 @@ AGENT_WORKSPACES = {
     "test": "workspace-test",
 }
 
-# OpenClaw config path
-OPENCLAW_CONFIG_PATH = Path.home() / ".openclaw" / "openclaw.json"
-
-
 # =============================================================================
 # Helper Functions
 # =============================================================================
-
-def get_gateway_config() -> tuple[str, str]:
-    """
-    Read OpenClaw gateway URL and auth token from ~/.openclaw/openclaw.json.
-
-    Returns:
-        tuple: (gateway_url, auth_token)
-
-    Raises:
-        typer.Exit: If config file not found
-    """
-    if not OPENCLAW_CONFIG_PATH.exists():
-        typer.echo("Error: OpenClaw config not found. Please install OpenClaw first.", err=True)
-        raise typer.Exit(1)
-
-    config = json.loads(OPENCLAW_CONFIG_PATH.read_text())
-    port = config.get("gateway", {}).get("port", 18789)
-    token = config.get("gateway", {}).get("auth", {}).get("token", "")
-
-    return f"http://127.0.0.1:{port}", token
-
 
 def get_workspace(agent_name: str) -> Path:
     """
@@ -213,43 +188,48 @@ def save_memory(ws: Path, task_id: str, task: str, output_file: Optional[str], l
         f.write(entry)
 
 
-def call_llm(prompt: str, model: str = "anthropic/claude-sonnet-4-5") -> str:
+def call_llm(message: str, agent_name: str = "main") -> str:
     """
-    Call LLM via OpenClaw gateway.
+    Call LLM via OpenClaw agent command.
 
-    Uses the local gateway's OpenAI-compatible API endpoint.
+    Uses `openclaw agent --agent <name>` which:
+    - Loads the agent's SOUL.md from its workspace
+    - Uses the configured Anthropic OAuth
+    - Returns the agent's response
 
     Args:
-        prompt: The prompt to send
-        model: Model identifier (default: claude-sonnet-4-5)
+        message: The message/task to send
+        agent_name: OpenClaw agent ID (orca, design, code, test, or main)
 
     Returns:
         LLM response content
 
     Raises:
-        typer.Exit: On HTTP errors
+        typer.Exit: On subprocess errors
     """
-    gateway_url, token = get_gateway_config()
-
     try:
-        response = httpx.post(
-            f"{gateway_url}/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 8192,
-            },
-            timeout=300.0,
+        result = subprocess.run(
+            [
+                "openclaw", "agent",
+                "--agent", agent_name,
+                "--local",
+                "--message", message,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
         )
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-    except httpx.HTTPError as e:
-        typer.echo(f"Error calling LLM: {e}", err=True)
+
+        if result.returncode != 0:
+            typer.echo(f"Error calling LLM: {result.stderr}", err=True)
+            raise typer.Exit(1)
+
+        return result.stdout.strip()
+    except subprocess.TimeoutExpired:
+        typer.echo("Error: LLM call timed out", err=True)
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        typer.echo("Error: openclaw command not found. Please install OpenClaw first.", err=True)
         raise typer.Exit(1)
 
 
@@ -312,8 +292,7 @@ def run(
         typer.echo(f"[{agent.upper()}] Workspace: {ws}")
         typer.echo(f"[{agent.upper()}] Task ID: {task_id}")
 
-    # Load SOUL and memory
-    soul = load_soul(ws)
+    # Load memory (SOUL is loaded by OpenClaw automatically)
     memory = "" if no_memory else load_memory(ws)
 
     # Load context file if provided
@@ -325,35 +304,32 @@ def run(
         else:
             typer.echo(f"Warning: Context file not found: {context}", err=True)
 
-    # Build prompt
-    memory_section = f"\n## Recent Memories\n\n{memory}\n" if memory else ""
+    # Build message (SOUL is handled by OpenClaw, we just send task + context + memory)
+    memory_section = f"\n## Recent Lessons Learned\n{memory}\n" if memory else ""
     output_instruction = ""
     if output:
         output_instruction = f"""
+
 ## Output Instruction
-Save your output to: {output}
 Format your final deliverable between these markers:
 ---OUTPUT---
-[Your complete output here - this will be saved to the file]
+[Your complete output here]
 ---END OUTPUT---
 """
 
-    prompt = f"""{soul}
-{memory_section}
-## Current Task
+    message = f"""## Task
 Task ID: {task_id}
 {task}
 {context_content}
+{memory_section}
 {output_instruction}
-
-Respond professionally and concisely. Focus on delivering high-quality work.
 """
 
     if verbose:
-        typer.echo(f"[{agent.upper()}] Calling LLM...")
+        typer.echo(f"[{agent.upper()}] Calling OpenClaw agent...")
 
-    # Call LLM
-    response = call_llm(prompt, model)
+    # Call LLM via OpenClaw agent
+    response = call_llm(message, agent)
     final_output = extract_output(response)
 
     # Save output
@@ -367,15 +343,13 @@ Respond professionally and concisely. Focus on delivering high-quality work.
 
     # Auto-reflection and memory update
     if not no_memory:
-        lesson_prompt = f"""You just completed a task. Briefly summarize the key lesson for future similar tasks.
+        lesson_prompt = f"""Briefly summarize the key lesson from this task in ONE sentence (max 100 chars).
 
-Task: {task[:500]}
-Output summary: {final_output[:500]}...
-
-Respond with ONE short sentence (max 100 chars)."""
+Task: {task[:200]}
+Output: {final_output[:200]}..."""
 
         try:
-            lesson = call_llm(lesson_prompt, "anthropic/claude-haiku-3")
+            lesson = call_llm(lesson_prompt, "main")
             lesson = lesson.strip()[:100]
         except Exception:
             lesson = "Task completed successfully."

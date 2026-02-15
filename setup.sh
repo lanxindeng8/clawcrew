@@ -38,17 +38,14 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  -h, --help      Show this help message"
     echo ""
     echo "Install will:"
-    echo "  - Add OrcaBot agent (orchestrator)"
-    echo "  - Configure Telegram group binding"
+    echo "  - Register 4 agents: orca (orchestrator), design, code, test"
+    echo "  - Configure Telegram binding for OrcaBot"
     echo "  - Set required OpenClaw settings"
     echo "  - Copy workspace folders to ~/.openclaw/"
     echo ""
-    echo "Note: OrcaBot calls design/code/test agents via CLI,"
-    echo "      so they don't need to be registered in OpenClaw."
-    echo ""
     echo "Uninstall will:"
-    echo "  - Remove OrcaBot agent from config"
-    echo "  - Remove OrcaBot bindings"
+    echo "  - Remove all ClawCrew agents from config"
+    echo "  - Remove OrcaBot Telegram binding"
     echo "  - Remove broadcast entries"
     echo "  - Optionally remove Telegram account"
     echo "  - Optionally remove workspace folders"
@@ -66,17 +63,17 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     echo "================================================"
     echo ""
     echo "This will remove:"
-    echo "  - OrcaBot agent"
-    echo "  - OrcaBot bindings"
-    echo "  - Broadcast entries for OrcaBot"
+    echo "  - ClawCrew agents (orca, design, code, test)"
+    echo "  - OrcaBot Telegram binding"
+    echo "  - Broadcast entries"
     echo "  - Telegram account (optional)"
     echo "  - Workspace folders (optional)"
     echo ""
 
     # Show current ClawCrew accounts
     echo "--- Current ClawCrew Configuration ---"
-    ORCA_INSTALLED=$(jq -r '.agents.list | map(select(.id == "orca")) | length' "$OPENCLAW_CONFIG")
-    echo "  OrcaBot installed: $([ "$ORCA_INSTALLED" -gt 0 ] && echo "yes" || echo "no")"
+    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+    echo "  ClawCrew agents installed: $CLAWCREW_AGENTS"
 
     ORCA_BINDINGS=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
     echo "  OrcaBot bindings: $ORCA_BINDINGS"
@@ -108,41 +105,41 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
     echo "[1/4] Backed up config"
 
-    # Remove agent, bindings, broadcast, and optionally account
+    # Remove all ClawCrew agents, bindings, broadcast, and optionally account
     if [ -n "$REMOVE_ACCOUNT" ]; then
         jq --arg acc "$REMOVE_ACCOUNT" '
-        # Remove OrcaBot agent
-        .agents.list = [.agents.list[] | select(.id != "orca")]
-        # Remove OrcaBot bindings
-        | .bindings = [.bindings[] | select(.agentId != "orca")]
-        # Remove broadcast entries containing orca
+        # Remove all ClawCrew agents
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        # Remove ClawCrew bindings
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. != "orca")] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
               end
             ))
           else . end
         # Remove specified account
         | del(.channels.telegram.accounts[$acc])
         ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
-        echo "[2/4] Removed OrcaBot, bindings, broadcast, and account '$REMOVE_ACCOUNT'"
+        echo "[2/4] Removed ClawCrew agents, bindings, broadcast, and account '$REMOVE_ACCOUNT'"
     else
         jq '
-        # Remove OrcaBot agent
-        .agents.list = [.agents.list[] | select(.id != "orca")]
-        # Remove OrcaBot bindings
-        | .bindings = [.bindings[] | select(.agentId != "orca")]
-        # Remove broadcast entries containing orca
+        # Remove all ClawCrew agents
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        # Remove ClawCrew bindings
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. != "orca")] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
               end
             ))
           else . end
         ' "$OPENCLAW_CONFIG" > "$OPENCLAW_CONFIG.tmp" && mv "$OPENCLAW_CONFIG.tmp" "$OPENCLAW_CONFIG"
-        echo "[2/4] Removed OrcaBot, bindings, and broadcast (account kept)"
+        echo "[2/4] Removed ClawCrew agents, bindings, and broadcast (account kept)"
     fi
 
     # Remove workspace folders
@@ -187,11 +184,9 @@ echo "  ClawCrew Setup - Multi-Agent Dev Team"
 echo "================================================"
 echo ""
 echo "This script will:"
-echo "  1. Add OrcaBot agent (orchestrator)"
-echo "  2. Configure Telegram group binding"
+echo "  1. Register 4 agents: orca, design, code, test"
+echo "  2. Configure Telegram binding for OrcaBot"
 echo "  3. Copy agent workspaces to ~/.openclaw/"
-echo ""
-echo "Note: OrcaBot calls design/code/test agents via CLI."
 echo ""
 
 # Check for saved credentials
@@ -359,20 +354,40 @@ ALLOWED_IDS_JSON=$(echo "$ALLOWED_IDS" | tr ',' '\n' | jq -R . | jq -s .)
 cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
 echo "[1/5] Backed up original config"
 
-# Create the agent JSON (only orca - other agents called via CLI)
-AGENT_JSON=$(cat <<EOF
-{
-  "id": "orca",
-  "name": "OrcaBot",
-  "workspace": "$OPENCLAW_DIR/workspace-orca",
-  "model": "anthropic/claude-sonnet-4-5",
-  "identity": {
-    "name": "OrcaBot"
+# Create the agents JSON array (all 4 agents)
+AGENTS_JSON=$(cat <<EOF
+[
+  {
+    "id": "orca",
+    "name": "OrcaBot",
+    "workspace": "$OPENCLAW_DIR/workspace-orca",
+    "model": "anthropic/claude-sonnet-4-5",
+    "identity": { "name": "OrcaBot" },
+    "groupChat": { "mentionPatterns": ["@orca", "@OrcaBot"] },
+    "subagents": { "allowAgents": ["design", "code", "test"] }
   },
-  "groupChat": {
-    "mentionPatterns": ["@orca", "@OrcaBot"]
+  {
+    "id": "design",
+    "name": "DesignBot",
+    "workspace": "$OPENCLAW_DIR/workspace-design",
+    "model": "anthropic/claude-opus-4-5",
+    "identity": { "name": "DesignBot" }
+  },
+  {
+    "id": "code",
+    "name": "CodeBot",
+    "workspace": "$OPENCLAW_DIR/workspace-code",
+    "model": "anthropic/claude-opus-4-5",
+    "identity": { "name": "CodeBot" }
+  },
+  {
+    "id": "test",
+    "name": "TestBot",
+    "workspace": "$OPENCLAW_DIR/workspace-test",
+    "model": "anthropic/claude-sonnet-4-5",
+    "identity": { "name": "TestBot" }
   }
-}
+]
 EOF
 )
 
@@ -414,7 +429,7 @@ EOF
 # 2. Add binding to bindings array
 # 3. Add account to channels.telegram.accounts
 
-jq --argjson agent "$AGENT_JSON" \
+jq --argjson agents "$AGENTS_JSON" \
    --argjson binding "$BINDING_JSON" \
    --argjson account "$ACCOUNT_JSON" \
    --arg account_name "$ACCOUNT_NAME" \
@@ -442,15 +457,15 @@ jq --argjson agent "$AGENT_JSON" \
    # Enable telegram plugin
    | .plugins.entries.telegram.enabled = true
 
-   # === OrcaBot Agent ===
+   # === ClawCrew Agents (orca, design, code, test) ===
    # Ensure agents.list exists
    | .agents.list = (if .agents.list then .agents.list else [] end)
-   # Remove existing orca agent if any
-   | .agents.list = [.agents.list[] | select(.id != "orca")]
-   # Add orca agent
-   | .agents.list += [$agent]
+   # Remove existing ClawCrew agents if any
+   | .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+   # Add all ClawCrew agents
+   | .agents.list += $agents
 
-   # === Bindings ===
+   # === Bindings (only orca needs binding for Telegram) ===
    # Initialize bindings if not exists
    | .bindings = (if .bindings then .bindings else [] end)
    # Remove existing orca binding if any
@@ -469,7 +484,7 @@ jq --argjson agent "$AGENT_JSON" \
 
 echo "[2/5] Updated openclaw.json with required settings"
 
-echo "[3/5] Added OrcaBot agent and Telegram binding"
+echo "[3/5] Added ClawCrew agents (orca, design, code, test) and Telegram binding"
 
 # Copy workspace folders and bin
 echo "[4/5] Copying files..."
@@ -497,13 +512,13 @@ echo "  Created artifacts/"
 # Install Python dependencies
 echo "  Installing Python dependencies..."
 if command -v pip3 &> /dev/null; then
-    pip3 install --quiet typer httpx 2>/dev/null || pip3 install typer httpx
-    echo "  Installed typer, httpx"
+    pip3 install --quiet typer 2>/dev/null || pip3 install typer
+    echo "  Installed typer"
 elif command -v pip &> /dev/null; then
-    pip install --quiet typer httpx 2>/dev/null || pip install typer httpx
-    echo "  Installed typer, httpx"
+    pip install --quiet typer 2>/dev/null || pip install typer
+    echo "  Installed typer"
 else
-    echo "  ⚠️  pip not found. Please install manually: pip install typer httpx"
+    echo "  ⚠️  pip not found. Please install manually: pip install typer"
 fi
 
 # Verify settings
@@ -526,19 +541,19 @@ else
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
-VERIFY_ORCA=$(jq -r '.agents.list | map(select(.id == "orca")) | length' "$OPENCLAW_CONFIG")
-if [ "$VERIFY_ORCA" -eq 1 ]; then
-    echo "  ✓  OrcaBot agent added"
+VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_AGENTS" -eq 4 ]; then
+    echo "  ✓  All ClawCrew agents added (orca, design, code, test)"
 else
-    echo "  ✗  OrcaBot agent not found"
+    echo "  ✗  Expected 4 ClawCrew agents, found $VERIFY_AGENTS"
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
 VERIFY_BINDING=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
 if [ "$VERIFY_BINDING" -ge 1 ]; then
-    echo "  ✓  OrcaBot binding configured"
+    echo "  ✓  OrcaBot Telegram binding configured"
 else
-    echo "  ✗  OrcaBot binding missing"
+    echo "  ✗  OrcaBot Telegram binding missing"
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 

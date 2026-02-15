@@ -192,9 +192,9 @@ ClawCrew uses **CLI calls**, not OpenClaw's sessions_spawn:
 sessions_spawn("design", ...)
 ```
 
-### Only OrcaBot is Registered
+### All Agents are Registered
 
-In OpenClaw config, only `orca` is registered as an agent. The other agents (design, code, test) are invoked via CLI and don't need registration.
+All 4 agents (orca, design, code, test) are registered in OpenClaw. OrcaBot receives Telegram messages and orchestrates the others via CLI.
 
 ### Artifacts are Gitignored
 
