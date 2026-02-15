@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS - Figma-inspired design
+# Custom CSS - Figma Virtual Office Dashboard inspired design
 st.markdown("""
 <style>
     /* Main theme - Light mode with soft blue/purple */
@@ -36,9 +36,10 @@ st.markdown("""
         --text-secondary: #64748b;
         --accent-blue: #3b82f6;
         --accent-purple: #8b5cf6;
-        --accent-green: #10b981;
+        --accent-green: #22c55e;
         --accent-orange: #f97316;
         --accent-red: #ef4444;
+        --accent-yellow: #eab308;
     }
 
     /* Hide Streamlit branding */
@@ -58,14 +59,277 @@ st.markdown("""
         border-right: 1px solid var(--border-color);
     }
 
-    [data-testid="stSidebar"] .stMarkdown h1 {
-        color: var(--text-primary);
-        font-size: 1.5rem;
+    /* ============================================ */
+    /* AGENT FLOOR - Virtual Office Style */
+    /* ============================================ */
+
+    .agent-floor {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        min-height: 400px;
+        position: relative;
+        border: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .department-label {
+        position: absolute;
+        top: -12px;
+        padding: 4px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .department-orchestrator { background: #6366f1; left: 20px; }
+    .department-design { background: #8b5cf6; left: 180px; }
+    .department-engineering { background: #3b82f6; right: 180px; }
+    .department-qa { background: #10b981; right: 20px; }
+
+    /* Agent Card - Virtual Office Style */
+    .vo-agent-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        border: 2px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        min-height: 200px;
+    }
+
+    .vo-agent-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: var(--accent-blue);
+        z-index: 100;
+    }
+
+    .vo-agent-card.status-running {
+        border-color: var(--accent-orange);
+        animation: card-pulse 2s infinite;
+    }
+
+    .vo-agent-card.status-running:hover {
+        border-color: var(--accent-orange);
+    }
+
+    @keyframes card-pulse {
+        0%, 100% { box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.2); }
+        50% { box-shadow: 0 4px 20px -1px rgba(249, 115, 22, 0.4); }
+    }
+
+    /* Lead Badge */
+    .lead-badge {
+        position: absolute;
+        top: -8px;
+        left: 12px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        padding: 2px 10px;
+        border-radius: 4px;
+        font-size: 0.65rem;
         font-weight: 700;
+        letter-spacing: 0.5px;
+        border: 1px solid #93c5fd;
+    }
+
+    /* Avatar */
+    .vo-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        margin: 0 auto 0.75rem;
+        position: relative;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .vo-avatar-status {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+
+    .vo-avatar-status.online { background: var(--accent-green); }
+    .vo-avatar-status.running { background: var(--accent-orange); animation: status-blink 1s infinite; }
+    .vo-avatar-status.away { background: var(--accent-yellow); }
+    .vo-avatar-status.offline { background: #94a3b8; }
+    .vo-avatar-status.error { background: var(--accent-red); }
+
+    @keyframes status-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Agent Info */
+    .vo-agent-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: center;
+        margin-bottom: 0.25rem;
+    }
+
+    .vo-agent-role {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Status Badge */
+    .vo-status-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
         margin-bottom: 0.5rem;
     }
 
-    /* Card styling */
+    .vo-status-badge.online {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .vo-status-badge.running {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+
+    .vo-status-badge.away {
+        background: #fef9c3;
+        color: #a16207;
+    }
+
+    .vo-status-badge.offline {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .vo-status-badge.error {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .vo-status-icon {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .vo-status-icon.online { background: var(--accent-green); }
+    .vo-status-icon.running { background: var(--accent-orange); }
+    .vo-status-icon.away { background: var(--accent-yellow); }
+    .vo-status-icon.offline { background: #94a3b8; }
+    .vo-status-icon.error { background: var(--accent-red); }
+
+    /* Idle time */
+    .vo-idle-time {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    /* Agent Details (on hover/click) */
+    .vo-agent-details {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.75rem;
+    }
+
+    .vo-detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        color: var(--text-secondary);
+    }
+
+    .vo-detail-label {
+        font-weight: 500;
+    }
+
+    .vo-detail-value {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .vo-current-task {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 8px;
+        margin-top: 8px;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+    }
+
+    .vo-current-task strong {
+        color: var(--text-primary);
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    /* ============================================ */
+    /* Status Legend */
+    /* ============================================ */
+
+    .status-legend {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 30px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .legend-dot.online { background: var(--accent-green); }
+    .legend-dot.running { background: var(--accent-orange); }
+    .legend-dot.away { background: var(--accent-yellow); }
+    .legend-dot.offline { background: #94a3b8; }
+
+    /* ============================================ */
+    /* Other existing styles */
+    /* ============================================ */
+
     .card {
         background: var(--bg-card);
         border-radius: 12px;
@@ -89,7 +353,7 @@ st.markdown("""
         margin: 0;
     }
 
-    /* Agent card */
+    /* Sidebar Agent card */
     .agent-card {
         background: var(--bg-card);
         border-radius: 10px;
@@ -157,25 +421,6 @@ st.markdown("""
         50% { opacity: 0.5; }
     }
 
-    /* Metric cards */
-    .metric-card {
-        background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-        border-radius: 12px;
-        padding: 1.25rem;
-        color: white;
-    }
-
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-
-    .metric-label {
-        font-size: 0.875rem;
-        opacity: 0.9;
-    }
-
     /* Log container */
     .log-container {
         background: #1e293b;
@@ -207,128 +452,6 @@ st.markdown("""
     .log-agent-design { color: #8b5cf6; }
     .log-agent-code { color: #3b82f6; }
     .log-agent-test { color: #10b981; }
-
-    /* Workflow visualization */
-    .workflow-container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.5rem;
-        gap: 0.5rem;
-    }
-
-    .workflow-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .workflow-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        background: var(--bg-sidebar);
-        border: 2px solid var(--border-color);
-    }
-
-    .workflow-icon.active {
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-
-    .workflow-icon.completed {
-        border-color: var(--accent-green);
-        background: #ecfdf5;
-    }
-
-    .workflow-arrow {
-        color: var(--border-color);
-        font-size: 1.5rem;
-    }
-
-    /* File tree */
-    .file-item {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem 0.75rem;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .file-item:hover {
-        background: var(--bg-sidebar);
-    }
-
-    .file-icon {
-        margin-right: 0.5rem;
-    }
-
-    /* Section headers */
-    .section-header {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    /* Navigation */
-    .nav-item {
-        padding: 0.625rem 0.875rem;
-        border-radius: 8px;
-        margin-bottom: 0.25rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 0.625rem;
-        color: var(--text-secondary);
-    }
-
-    .nav-item:hover {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-blue);
-    }
-
-    .nav-item.active {
-        background: var(--accent-blue);
-        color: white;
-    }
-
-    /* Top bar */
-    .top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 0;
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .search-box {
-        background: var(--bg-sidebar);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        width: 300px;
-        font-size: 0.875rem;
-    }
-
-    /* Chart container */
-    .chart-container {
-        background: var(--bg-card);
-        border-radius: 12px;
-        padding: 1rem;
-        border: 1px solid var(--border-color);
-    }
 
     /* Scrollbar styling */
     ::-webkit-scrollbar {
@@ -367,7 +490,26 @@ def fetch_api(endpoint: str, default=None):
 
 def get_status_class(status: str) -> str:
     """Get CSS class for status."""
-    return f"status-{status.lower()}"
+    status_map = {
+        "running": "running",
+        "idle": "online",
+        "completed": "offline",
+        "error": "error",
+        "away": "away",
+    }
+    return status_map.get(status.lower(), "offline")
+
+
+def get_status_label(status: str) -> str:
+    """Get display label for status."""
+    status_map = {
+        "running": "In Progress",
+        "idle": "Online",
+        "completed": "Completed",
+        "error": "Error",
+        "away": "Away",
+    }
+    return status_map.get(status.lower(), status.title())
 
 
 def format_tokens(n: int) -> str:
@@ -379,9 +521,9 @@ def format_tokens(n: int) -> str:
     return str(n)
 
 
-def render_agent_card(agent: dict, expanded: bool = False):
+def render_agent_card_sidebar(agent: dict):
     """Render an agent card in the sidebar."""
-    status_class = get_status_class(agent.get("status", "idle"))
+    status_class = f"status-{agent.get('status', 'idle').lower()}"
 
     html = f"""
     <div class="agent-card">
@@ -400,26 +542,108 @@ def render_agent_card(agent: dict, expanded: bool = False):
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_workflow(current_phase: str = "code"):
-    """Render workflow visualization."""
-    phases = [
-        {"name": "Orca", "emoji": "🦑", "status": "completed"},
-        {"name": "Design", "emoji": "🎨", "status": "completed"},
-        {"name": "Code", "emoji": "💻", "status": "active"},
-        {"name": "Test", "emoji": "🧪", "status": "pending"},
-    ]
+def render_virtual_office_agent(agent: dict, show_details: bool = True):
+    """Render a single agent card in Virtual Office style."""
+    status = agent.get("status", "idle")
+    status_class = get_status_class(status)
+    status_label = get_status_label(status)
+    is_lead = agent.get("name", "").lower() == "orca"
 
-    html = '<div class="workflow-container">'
-    for i, phase in enumerate(phases):
-        status_class = phase["status"]
-        html += f'''
-        <div class="workflow-step">
-            <div class="workflow-icon {status_class}">{phase["emoji"]}</div>
-            <span style="font-size: 0.75rem; color: var(--text-secondary);">{phase["name"]}</span>
+    # Card status class
+    card_class = f"vo-agent-card status-{status}"
+
+    # Build HTML
+    html = f'''
+    <div class="{card_class}">
+        {"<div class='lead-badge'>LEAD</div>" if is_lead else ""}
+
+        <div class="vo-avatar">
+            {agent.get('emoji', '🤖')}
+            <div class="vo-avatar-status {status_class}"></div>
         </div>
+
+        <div class="vo-agent-name">{agent.get('name', 'Unknown').title()}</div>
+        <div class="vo-agent-role">{agent.get('role', 'Agent')}</div>
+
+        <div class="vo-status-badge {status_class}">
+            <span class="vo-status-icon {status_class}"></span>
+            {status_label}
+        </div>
+
+        <div class="vo-idle-time">
+            {f"Active: {agent.get('last_active', 'Just now')}" if status == "running" else f"Idle: {agent.get('idle_time', '3 min')}"}
+        </div>
+    '''
+
+    if show_details:
+        html += f'''
+        <div class="vo-agent-details">
+            <div class="vo-detail-row">
+                <span class="vo-detail-label">Model</span>
+                <span class="vo-detail-value">{agent.get('model', 'claude-3-opus')}</span>
+            </div>
+            <div class="vo-detail-row">
+                <span class="vo-detail-label">Tokens</span>
+                <span class="vo-detail-value">{format_tokens(agent.get('tokens', 0))}</span>
+            </div>
+            <div class="vo-detail-row">
+                <span class="vo-detail-label">Tasks</span>
+                <span class="vo-detail-value">{agent.get('task_count', 0)}</span>
+            </div>
         '''
-        if i < len(phases) - 1:
-            html += '<span class="workflow-arrow">→</span>'
+
+        if agent.get('current_task'):
+            html += f'''
+            <div class="vo-current-task">
+                <strong>Current Task:</strong>
+                {agent.get('current_task', '')[:60]}{'...' if len(agent.get('current_task', '')) > 60 else ''}
+            </div>
+            '''
+
+        html += '</div>'
+
+    html += '</div>'
+
+    return html
+
+
+def render_status_legend():
+    """Render the status legend."""
+    html = '''
+    <div class="status-legend">
+        <div class="legend-item">
+            <span class="legend-dot online"></span>
+            Online
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot running"></span>
+            In Progress
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot away"></span>
+            Away
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot offline"></span>
+            Offline
+        </div>
+    </div>
+    '''
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_agent_floor(agents: list):
+    """Render the Virtual Office agent floor."""
+
+    # Status legend
+    render_status_legend()
+
+    # Agent floor grid
+    html = '<div class="agent-floor">'
+
+    for agent in agents:
+        html += render_virtual_office_agent(agent, show_details=True)
+
     html += '</div>'
 
     st.markdown(html, unsafe_allow_html=True)
@@ -502,19 +726,17 @@ with st.sidebar:
     st.markdown("### Agents")
 
     agents = fetch_api("/api/agents", [])
-    if agents:
-        for agent in agents:
-            render_agent_card(agent)
-    else:
+    if not agents:
         # Mock data when API is not available
-        mock_agents = [
+        agents = [
             {"name": "orca", "emoji": "🦑", "role": "Orchestrator", "status": "running"},
             {"name": "design", "emoji": "🎨", "role": "Architect", "status": "completed"},
             {"name": "code", "emoji": "💻", "role": "Engineer", "status": "running"},
             {"name": "test", "emoji": "🧪", "role": "QA", "status": "idle"},
         ]
-        for agent in mock_agents:
-            render_agent_card(agent)
+
+    for agent in agents:
+        render_agent_card_sidebar(agent)
 
     st.divider()
 
@@ -555,7 +777,7 @@ if page == "home":
     with col2:
         st.metric(
             label="Agents Running",
-            value=stats.get("agents_running", 1),
+            value=stats.get("agents_running", 2),
             delta=None
         )
     with col3:
@@ -573,27 +795,71 @@ if page == "home":
 
     st.divider()
 
-    # Current task & workflow
-    st.markdown("### 📋 Current Task")
+    # Current task info
+    st.markdown("### 📋 Current Task: Create email validation function")
+    st.caption("Task ID: 20240214-153042 • Started 5 minutes ago")
+    st.progress(0.6, text="Code phase in progress...")
 
-    with st.container():
-        st.markdown("""
-        <div class="card">
-            <div class="card-header">
-                <span style="font-size: 1.25rem;">📧</span>
-                <h3 class="card-title">Create email validation function</h3>
-            </div>
-            <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
-                Task ID: 20240214-153042 • Started 5 minutes ago
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.divider()
 
-        # Workflow visualization
-        render_workflow()
+    # Agent Floor - Virtual Office Style
+    st.markdown("### 🤖 Agent Team")
 
-        # Progress bar
-        st.progress(0.6, text="Code phase in progress...")
+    # Get agents with extended mock data
+    agents = fetch_api("/api/agents", [])
+    if not agents:
+        agents = [
+            {
+                "name": "orca",
+                "emoji": "🦑",
+                "role": "Orchestrator",
+                "status": "running",
+                "last_active": "Just now",
+                "idle_time": "0 min",
+                "model": "claude-3-opus",
+                "tokens": 4200,
+                "task_count": 12,
+                "current_task": "Coordinating email validation task, reviewing CodeBot output"
+            },
+            {
+                "name": "design",
+                "emoji": "🎨",
+                "role": "Architect",
+                "status": "idle",
+                "last_active": "10 min ago",
+                "idle_time": "10 min",
+                "model": "claude-3-sonnet",
+                "tokens": 3800,
+                "task_count": 8,
+                "current_task": None
+            },
+            {
+                "name": "code",
+                "emoji": "💻",
+                "role": "Engineer",
+                "status": "running",
+                "last_active": "2 min ago",
+                "idle_time": "0 min",
+                "model": "claude-3-opus",
+                "tokens": 5120,
+                "task_count": 15,
+                "current_task": "Implementing email validation with regex pattern matching"
+            },
+            {
+                "name": "test",
+                "emoji": "🧪",
+                "role": "QA Engineer",
+                "status": "idle",
+                "last_active": "30 min ago",
+                "idle_time": "30 min",
+                "model": "claude-3-sonnet",
+                "tokens": 2300,
+                "task_count": 6,
+                "current_task": None
+            },
+        ]
+
+    render_agent_floor(agents)
 
     st.divider()
 
@@ -655,11 +921,66 @@ elif page == "agents":
     agents = fetch_api("/api/agents", [])
     if not agents:
         agents = [
-            {"name": "orca", "emoji": "🦑", "role": "Orchestrator", "status": "running", "last_active": "2 min ago", "color": "#6366f1"},
-            {"name": "design", "emoji": "🎨", "role": "Architect", "status": "idle", "last_active": "10 min ago", "color": "#8b5cf6"},
-            {"name": "code", "emoji": "💻", "role": "Engineer", "status": "completed", "last_active": "5 min ago", "color": "#3b82f6"},
-            {"name": "test", "emoji": "🧪", "role": "QA", "status": "error", "last_active": "1 min ago", "color": "#10b981"},
+            {
+                "name": "orca",
+                "emoji": "🦑",
+                "role": "Orchestrator",
+                "status": "running",
+                "last_active": "Just now",
+                "idle_time": "0 min",
+                "model": "claude-3-opus",
+                "tokens": 4200,
+                "task_count": 12,
+                "current_task": "Coordinating email validation task",
+                "color": "#6366f1"
+            },
+            {
+                "name": "design",
+                "emoji": "🎨",
+                "role": "Architect",
+                "status": "idle",
+                "last_active": "10 min ago",
+                "idle_time": "10 min",
+                "model": "claude-3-sonnet",
+                "tokens": 3800,
+                "task_count": 8,
+                "current_task": None,
+                "color": "#8b5cf6"
+            },
+            {
+                "name": "code",
+                "emoji": "💻",
+                "role": "Engineer",
+                "status": "running",
+                "last_active": "2 min ago",
+                "idle_time": "0 min",
+                "model": "claude-3-opus",
+                "tokens": 5120,
+                "task_count": 15,
+                "current_task": "Implementing email validation",
+                "color": "#3b82f6"
+            },
+            {
+                "name": "test",
+                "emoji": "🧪",
+                "role": "QA Engineer",
+                "status": "idle",
+                "last_active": "30 min ago",
+                "idle_time": "30 min",
+                "model": "claude-3-sonnet",
+                "tokens": 2300,
+                "task_count": 6,
+                "current_task": None,
+                "color": "#10b981"
+            },
         ]
+
+    render_agent_floor(agents)
+
+    st.divider()
+
+    # Detailed view with expanders
+    st.markdown("### 📋 Agent Details")
 
     cols = st.columns(2)
     for i, agent in enumerate(agents):
