@@ -194,49 +194,89 @@ echo ""
 echo "Note: OrcaBot calls design/code/test agents via CLI."
 echo ""
 
-# Collect user information
-echo "--- Telegram Configuration ---"
-echo ""
-echo "You need a Telegram bot token. If you don't have one:"
-echo "  1. Message @BotFather on Telegram"
-echo "  2. Send /newbot and follow instructions"
-echo "  3. IMPORTANT: Disable privacy mode:"
-echo "     /mybots -> Select bot -> Bot Settings -> Group Privacy -> Turn off"
-echo ""
-read -p "Telegram Bot Token: " BOT_TOKEN
+# Check for saved credentials
+CLAWCREW_ENV="$OPENCLAW_DIR/.clawcrew.env"
+USE_SAVED=false
 
-if [ -z "$BOT_TOKEN" ]; then
-    echo "Error: Bot token is required"
-    exit 1
+if [ -f "$CLAWCREW_ENV" ]; then
+    echo "Found saved credentials at $CLAWCREW_ENV"
+    source "$CLAWCREW_ENV"
+
+    if [ -n "$CLAWCREW_BOT_TOKEN" ] && [ -n "$CLAWCREW_GROUP_ID" ] && [ -n "$CLAWCREW_ALLOWED_IDS" ]; then
+        echo ""
+        echo "Saved configuration:"
+        echo "  Bot Token: ${CLAWCREW_BOT_TOKEN:0:20}..."
+        echo "  Group ID: $CLAWCREW_GROUP_ID"
+        echo "  Allowed Users: $CLAWCREW_ALLOWED_IDS"
+        echo "  Account Name: ${CLAWCREW_ACCOUNT_NAME:-clawcrew}"
+        echo ""
+        read -p "Use saved credentials? (Y/n): " USE_SAVED_ANSWER
+        if [ "$USE_SAVED_ANSWER" != "n" ] && [ "$USE_SAVED_ANSWER" != "N" ]; then
+            USE_SAVED=true
+            BOT_TOKEN="$CLAWCREW_BOT_TOKEN"
+            GROUP_ID="$CLAWCREW_GROUP_ID"
+            ALLOWED_IDS="$CLAWCREW_ALLOWED_IDS"
+            ACCOUNT_NAME="${CLAWCREW_ACCOUNT_NAME:-clawcrew}"
+            echo "Using saved credentials."
+        fi
+    fi
 fi
 
-echo ""
-echo "You need the Telegram group chat ID."
-echo "To get it: Add @userinfobot to your group, it will show the chat_id"
-echo "(Group IDs are typically negative numbers like -1234567890)"
-echo ""
-read -p "Telegram Group ID: " GROUP_ID
+if [ "$USE_SAVED" = false ]; then
+    # Collect user information
+    echo "--- Telegram Configuration ---"
+    echo ""
+    echo "You need a Telegram bot token. If you don't have one:"
+    echo "  1. Message @BotFather on Telegram"
+    echo "  2. Send /newbot and follow instructions"
+    echo "  3. IMPORTANT: Disable privacy mode:"
+    echo "     /mybots -> Select bot -> Bot Settings -> Group Privacy -> Turn off"
+    echo ""
+    read -p "Telegram Bot Token: " BOT_TOKEN
 
-if [ -z "$GROUP_ID" ]; then
-    echo "Error: Group ID is required"
-    exit 1
+    if [ -z "$BOT_TOKEN" ]; then
+        echo "Error: Bot token is required"
+        exit 1
+    fi
+
+    echo ""
+    echo "You need the Telegram group chat ID."
+    echo "To get it: Add @userinfobot to your group, it will show the chat_id"
+    echo "(Group IDs are typically negative numbers like -1234567890)"
+    echo ""
+    read -p "Telegram Group ID: " GROUP_ID
+
+    if [ -z "$GROUP_ID" ]; then
+        echo "Error: Group ID is required"
+        exit 1
+    fi
+
+    echo ""
+    echo "Enter Telegram user IDs allowed to interact with the bots."
+    echo "To get your user ID: Message @userinfobot privately"
+    echo "(Separate multiple IDs with commas, e.g., 123456789,987654321)"
+    echo ""
+    read -p "Allowed User IDs: " ALLOWED_IDS
+
+    if [ -z "$ALLOWED_IDS" ]; then
+        echo "Error: At least one user ID is required"
+        exit 1
+    fi
+
+    echo ""
+    read -p "Account name (default: clawcrew): " ACCOUNT_NAME
+    ACCOUNT_NAME=${ACCOUNT_NAME:-clawcrew}
+
+    # Save credentials for future use
+    echo "# ClawCrew saved credentials" > "$CLAWCREW_ENV"
+    echo "CLAWCREW_BOT_TOKEN=\"$BOT_TOKEN\"" >> "$CLAWCREW_ENV"
+    echo "CLAWCREW_GROUP_ID=\"$GROUP_ID\"" >> "$CLAWCREW_ENV"
+    echo "CLAWCREW_ALLOWED_IDS=\"$ALLOWED_IDS\"" >> "$CLAWCREW_ENV"
+    echo "CLAWCREW_ACCOUNT_NAME=\"$ACCOUNT_NAME\"" >> "$CLAWCREW_ENV"
+    chmod 600 "$CLAWCREW_ENV"
+    echo ""
+    echo "Credentials saved to $CLAWCREW_ENV"
 fi
-
-echo ""
-echo "Enter Telegram user IDs allowed to interact with the bots."
-echo "To get your user ID: Message @userinfobot privately"
-echo "(Separate multiple IDs with commas, e.g., 123456789,987654321)"
-echo ""
-read -p "Allowed User IDs: " ALLOWED_IDS
-
-if [ -z "$ALLOWED_IDS" ]; then
-    echo "Error: At least one user ID is required"
-    exit 1
-fi
-
-echo ""
-read -p "Account name (default: clawcrew): " ACCOUNT_NAME
-ACCOUNT_NAME=${ACCOUNT_NAME:-clawcrew}
 
 echo ""
 echo "--- Configuration Summary ---"
