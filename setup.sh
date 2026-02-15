@@ -170,8 +170,16 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     echo "  ClawCrew uninstalled!"
     echo "================================================"
     echo ""
-    echo "Don't forget to restart OpenClaw gateway:"
-    echo "  openclaw gateway restart"
+
+    # Restart OpenClaw gateway
+    echo "Restarting OpenClaw gateway..."
+    if command -v openclaw &> /dev/null; then
+        openclaw gateway restart && echo "  ✓  Gateway restarted"
+    else
+        echo "  ⚠️  openclaw command not found. Please restart manually:"
+        echo "     openclaw gateway restart"
+    fi
+
     echo ""
     exit 0
 fi
