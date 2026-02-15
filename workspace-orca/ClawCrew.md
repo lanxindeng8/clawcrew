@@ -42,7 +42,7 @@ design.md      main.py      test_main.py
 ### Run an Agent
 
 ```bash
-./bin/agent-cli.py run -a <agent> -t "<task>" [-o <output>] [-c <context>]
+~/.openclaw/bin/agent-cli.py run -a <agent> -t "<task>" [-o <output>] [-c <context>]
 ```
 
 **Options:**
@@ -60,34 +60,34 @@ design.md      main.py      test_main.py
 
 ```bash
 # Design an API
-./bin/agent-cli.py run -a design \
+~/.openclaw/bin/agent-cli.py run -a design \
   -t "Design a REST API for email validation with regex" \
-  -o artifacts/email/design.md
+  -o ~/.openclaw/artifacts/email/design.md
 
 # Implement from design
-./bin/agent-cli.py run -a code \
+~/.openclaw/bin/agent-cli.py run -a code \
   -t "Implement the email validator following the design" \
-  -c artifacts/email/design.md \
-  -o artifacts/email/validator.py
+  -c ~/.openclaw/artifacts/email/design.md \
+  -o ~/.openclaw/artifacts/email/validator.py
 
 # Write tests
-./bin/agent-cli.py run -a test \
+~/.openclaw/bin/agent-cli.py run -a test \
   -t "Write comprehensive tests for the email validator" \
-  -c artifacts/email/validator.py \
-  -o artifacts/email/test_validator.py
+  -c ~/.openclaw/artifacts/email/validator.py \
+  -o ~/.openclaw/artifacts/email/test_validator.py
 ```
 
 ### Other Commands
 
 ```bash
 # List available agents
-./bin/agent-cli.py list-agents
+~/.openclaw/bin/agent-cli.py list-agents
 
 # Show agent's recent memories
-./bin/agent-cli.py show-memory -a design
+~/.openclaw/bin/agent-cli.py show-memory -a design
 
 # Clear agent's memories
-./bin/agent-cli.py clear-memory -a design --all
+~/.openclaw/bin/agent-cli.py clear-memory -a design --all
 ```
 
 ## Workflow Example
@@ -96,29 +96,29 @@ design.md      main.py      test_main.py
 
 ### Phase 1: Design
 ```bash
-./bin/agent-cli.py run -a design \
+~/.openclaw/bin/agent-cli.py run -a design \
   -t "Design a Python function to validate email addresses using regex. Include: function signature, validation rules, edge cases, error handling." \
-  -o artifacts/20240214-120000/design.md
+  -o ~/.openclaw/artifacts/20240214-120000/design.md
 ```
 
 **Output:** `design.md` with API spec, validation rules, edge cases
 
 ### Phase 2: Code
 ```bash
-./bin/agent-cli.py run -a code \
+~/.openclaw/bin/agent-cli.py run -a code \
   -t "Implement the email validator following the design spec" \
-  -c artifacts/20240214-120000/design.md \
-  -o artifacts/20240214-120000/email_validator.py
+  -c ~/.openclaw/artifacts/20240214-120000/design.md \
+  -o ~/.openclaw/artifacts/20240214-120000/email_validator.py
 ```
 
 **Output:** `email_validator.py` with implementation
 
 ### Phase 3: Test
 ```bash
-./bin/agent-cli.py run -a test \
+~/.openclaw/bin/agent-cli.py run -a test \
   -t "Write unit tests for email_validator.py covering normal, edge, and error cases" \
-  -c artifacts/20240214-120000/email_validator.py \
-  -o artifacts/20240214-120000/test_email_validator.py
+  -c ~/.openclaw/artifacts/20240214-120000/email_validator.py \
+  -o ~/.openclaw/artifacts/20240214-120000/test_email_validator.py
 ```
 
 **Output:** `test_email_validator.py` with pytest tests
@@ -185,7 +185,7 @@ ClawCrew uses **CLI calls**, not OpenClaw's sessions_spawn:
 
 ```bash
 # CORRECT - Use CLI
-./bin/agent-cli.py run -a design -t "..."
+~/.openclaw/bin/agent-cli.py run -a design -t "..."
 
 # WRONG - Don't use spawn (will fail!)
 @DesignBot design an API...

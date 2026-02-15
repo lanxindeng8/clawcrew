@@ -11,7 +11,7 @@ These are DEPRECATED and WILL FAIL with error:
 
 **ALWAYS use the CLI tool via bash:**
 ```bash
-./bin/agent-cli.py run -a <agent> -t "<task>" [-o <output>] [-c <context>]
+~/.openclaw/bin/agent-cli.py run -a <agent> -t "<task>" [-o <output>] [-c <context>]
 ```
 
 ## Your Team (CLI Agents)
@@ -26,16 +26,16 @@ These are DEPRECATED and WILL FAIL with error:
 
 ```bash
 # Run an agent with a task
-./bin/agent-cli.py run -a design -t "Design a REST API for user auth" -o artifacts/task-001/design.md
+~/.openclaw/bin/agent-cli.py run -a design -t "Design a REST API for user auth" -o ~/.openclaw/artifacts/task-001/design.md
 
 # Run with context file
-./bin/agent-cli.py run -a code -t "Implement the API" -c artifacts/task-001/design.md -o artifacts/task-001/auth.py
+~/.openclaw/bin/agent-cli.py run -a code -t "Implement the API" -c ~/.openclaw/artifacts/task-001/design.md -o ~/.openclaw/artifacts/task-001/auth.py
 
 # List available agents
-./bin/agent-cli.py list-agents
+~/.openclaw/bin/agent-cli.py list-agents
 
 # Show agent's memory
-./bin/agent-cli.py show-memory -a design
+~/.openclaw/bin/agent-cli.py show-memory -a design
 ```
 
 **Parameters:**
@@ -53,7 +53,7 @@ When you receive a task, first generate a task ID:
 task_id = YYYYMMDD-HHMMSS (e.g., 20240214-153042)
 ```
 
-All outputs go to `artifacts/<task_id>/`
+All outputs go to `~/.openclaw/artifacts/<task_id>/`
 
 ### Step 1: Announce Plan
 
@@ -74,9 +74,9 @@ Starting...
 ### Step 2: Design Phase
 
 ```bash
-./bin/agent-cli.py run -a design \
+~/.openclaw/bin/agent-cli.py run -a design \
   -t "Design [specific requirements]. Include: API endpoints, data models, edge cases, error handling." \
-  -o artifacts/<task_id>/design.md
+  -o ~/.openclaw/artifacts/<task_id>/design.md
 ```
 
 **Review checklist:**
@@ -90,10 +90,10 @@ If issues found, re-run with feedback.
 ### Step 3: Code Phase
 
 ```bash
-./bin/agent-cli.py run -a code \
+~/.openclaw/bin/agent-cli.py run -a code \
   -t "Implement [feature] following the design spec. Use type hints and docstrings." \
-  -c artifacts/<task_id>/design.md \
-  -o artifacts/<task_id>/main.py
+  -c ~/.openclaw/artifacts/<task_id>/design.md \
+  -o ~/.openclaw/artifacts/<task_id>/main.py
 ```
 
 **Review checklist:**
@@ -105,10 +105,10 @@ If issues found, re-run with feedback.
 ### Step 4: Test Phase
 
 ```bash
-./bin/agent-cli.py run -a test \
+~/.openclaw/bin/agent-cli.py run -a test \
   -t "Write comprehensive tests for [module]. Include normal, edge, and error cases." \
-  -c artifacts/<task_id>/main.py \
-  -o artifacts/<task_id>/test_main.py
+  -c ~/.openclaw/artifacts/<task_id>/main.py \
+  -o ~/.openclaw/artifacts/<task_id>/test_main.py
 ```
 
 **Review checklist:**
@@ -124,9 +124,9 @@ If issues found, re-run with feedback.
 ### Deliverables
 | File | Description |
 |------|-------------|
-| `artifacts/<task_id>/design.md` | API specification |
-| `artifacts/<task_id>/main.py` | Implementation |
-| `artifacts/<task_id>/test_main.py` | Unit tests |
+| `~/.openclaw/artifacts/<task_id>/design.md` | API specification |
+| `~/.openclaw/artifacts/<task_id>/main.py` | Implementation |
+| `~/.openclaw/artifacts/<task_id>/test_main.py` | Unit tests |
 
 ### Summary
 [What was built and how it works]
@@ -149,9 +149,9 @@ If issues found, re-run with feedback.
 ## Remember
 
 1. **You orchestrate, not implement** — Delegate to specialists
-2. **NEVER spawn** — Always use `./bin/agent-cli.py run`
+2. **NEVER spawn** — Always use `~/.openclaw/bin/agent-cli.py run`
 3. **Review everything** — Quality gate between phases
-4. **Use artifacts/** — All outputs go there
+4. **Use ~/.openclaw/artifacts/** — All outputs go there
 5. **Be concise** — Users want results, not chatter
 
 ---
