@@ -39,24 +39,24 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # Start FastAPI backend
-echo -e "${GREEN}Starting API server on http://localhost:8000${NC}"
-python3 -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload &
+echo -e "${GREEN}Starting API server on http://localhost:6000${NC}"
+python3 -m uvicorn api:app --host 0.0.0.0 --port 6000 --reload &
 API_PID=$!
 
 # Wait for API to be ready
 sleep 2
 
 # Start Streamlit frontend
-echo -e "${GREEN}Starting Dashboard on http://localhost:8501${NC}"
-streamlit run dashboard.py --server.port 8501 --server.headless true &
+echo -e "${GREEN}Starting Dashboard on http://localhost:6001${NC}"
+python3 -m streamlit run dashboard.py --server.port 6001 --server.headless true &
 STREAMLIT_PID=$!
 
 echo ""
 echo -e "${GREEN}✅ Dashboard is running!${NC}"
 echo ""
-echo "  📊 Dashboard:  http://localhost:8501"
-echo "  🔌 API:        http://localhost:8000"
-echo "  📚 API Docs:   http://localhost:8000/docs"
+echo "  📊 Dashboard:  http://localhost:6001"
+echo "  🔌 API:        http://localhost:6000"
+echo "  📚 API Docs:   http://localhost:6000/docs"
 echo ""
 echo "Press Ctrl+C to stop"
 

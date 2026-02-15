@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 # Configuration
-API_URL = "http://localhost:8000"
+API_URL = "http://localhost:6000"
 REFRESH_INTERVAL = 5  # seconds
 
 # Page config
