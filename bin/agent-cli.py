@@ -31,6 +31,8 @@ import json
 import uuid
 import subprocess
 import shutil
+import re
+import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
@@ -56,7 +58,53 @@ AGENT_WORKSPACES = {
     "design": "workspace-design",
     "code": "workspace-code",
     "test": "workspace-test",
+    "repo": "workspace-repo",
 }
+
+# =============================================================================
+# Repository Analysis Configuration
+# =============================================================================
+
+# File reading limits
+MAX_FILE_SIZE = 100 * 1024  # 100KB per file
+MAX_TOTAL_CONTENT = 500 * 1024  # 500KB total
+MAX_TREE_DEPTH = 4
+MAX_FILES_PER_CATEGORY = 5
+
+# Priority files to always try to read
+PRIORITY_FILES = [
+    "README.md", "README.rst", "README.txt", "README",
+    "CONTRIBUTING.md", "ARCHITECTURE.md", "DESIGN.md",
+]
+
+# Entry point patterns by language
+ENTRY_POINT_PATTERNS = [
+    # Python
+    "main.py", "app.py", "run.py", "__main__.py", "cli.py",
+    "src/main.py", "src/app.py", "src/__main__.py",
+    # JavaScript/TypeScript
+    "index.js", "index.ts", "main.js", "main.ts", "app.js", "app.ts",
+    "src/index.js", "src/index.ts", "src/main.js", "src/main.ts",
+    # Go
+    "main.go", "cmd/main.go",
+    # Rust
+    "src/main.rs", "src/lib.rs",
+]
+
+# Config files by language/framework
+CONFIG_FILES = [
+    # Python
+    "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt",
+    "Pipfile", "poetry.lock",
+    # JavaScript
+    "package.json", "package-lock.json", "yarn.lock", "tsconfig.json",
+    # Go
+    "go.mod", "go.sum",
+    # Rust
+    "Cargo.toml", "Cargo.lock",
+    # General
+    "Makefile", "Dockerfile", "docker-compose.yml", ".env.example",
+]
 
 # =============================================================================
 # Helper Functions
@@ -251,6 +299,256 @@ def extract_output(response: str) -> str:
 
 
 # =============================================================================
+# Repository Analysis Functions
+# =============================================================================
+
+def parse_github_url(url: str) -> tuple:
+    """
+    Parse GitHub URL into components.
+
+    Supports:
+        https://github.com/user/repo
+        https://github.com/user/repo.git
+        git@github.com:user/repo.git
+
+    Args:
+        url: GitHub repository URL
+
+    Returns:
+        Tuple of (owner, repo_name, clone_url)
+
+    Raises:
+        ValueError: If URL format is not recognized
+    """
+    # HTTPS format
+    https_match = re.match(r'https://github\.com/([^/]+)/([^/.]+)(?:\.git)?/?', url)
+    if https_match:
+        owner, repo = https_match.groups()
+        return owner, repo, f"https://github.com/{owner}/{repo}.git"
+
+    # SSH format
+    ssh_match = re.match(r'git@github\.com:([^/]+)/([^/.]+)(?:\.git)?', url)
+    if ssh_match:
+        owner, repo = ssh_match.groups()
+        return owner, repo, f"https://github.com/{owner}/{repo}.git"
+
+    raise ValueError(f"Unrecognized GitHub URL format: {url}")
+
+
+def clone_repository(clone_url: str, target_dir: Path) -> bool:
+    """
+    Clone a repository with shallow depth.
+
+    Args:
+        clone_url: Git clone URL
+        target_dir: Directory to clone into
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", clone_url, str(target_dir)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+    except FileNotFoundError:
+        return False
+
+
+def generate_file_tree(repo_path: Path, max_depth: int = MAX_TREE_DEPTH) -> str:
+    """
+    Generate a file tree representation of the repository.
+
+    Args:
+        repo_path: Path to repository root
+        max_depth: Maximum directory depth to traverse
+
+    Returns:
+        String representation of file tree
+    """
+    lines = []
+
+    def walk(path: Path, prefix: str = "", depth: int = 0):
+        if depth > max_depth:
+            return
+
+        # Skip hidden directories and common noise
+        skip_dirs = {'.git', 'node_modules', '__pycache__', '.venv', 'venv',
+                     'dist', 'build', '.tox', '.pytest_cache', '.mypy_cache',
+                     'target', 'vendor'}
+
+        try:
+            entries = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+        except PermissionError:
+            return
+
+        # Filter and limit entries
+        dirs = [e for e in entries if e.is_dir() and e.name not in skip_dirs and not e.name.startswith('.')]
+        files = [e for e in entries if e.is_file() and not e.name.startswith('.')]
+
+        # Limit files shown per directory
+        if len(files) > 10:
+            files = files[:10]
+            truncated_files = True
+        else:
+            truncated_files = False
+
+        all_entries = dirs + files
+
+        for i, entry in enumerate(all_entries):
+            is_last = (i == len(all_entries) - 1) and not truncated_files
+            connector = "└── " if is_last else "├── "
+
+            if entry.is_dir():
+                lines.append(f"{prefix}{connector}{entry.name}/")
+                extension = "    " if is_last else "│   "
+                walk(entry, prefix + extension, depth + 1)
+            else:
+                lines.append(f"{prefix}{connector}{entry.name}")
+
+        if truncated_files:
+            lines.append(f"{prefix}└── ... ({len(entries) - len(dirs) - 10} more files)")
+
+    lines.append(f"{repo_path.name}/")
+    walk(repo_path)
+    return "\n".join(lines)
+
+
+def find_key_files(repo_path: Path) -> dict:
+    """
+    Find key files in the repository organized by category.
+
+    Args:
+        repo_path: Path to repository root
+
+    Returns:
+        Dict mapping category names to lists of file paths
+    """
+    result = {
+        "documentation": [],
+        "entry_points": [],
+        "config": [],
+        "core": [],
+    }
+
+    # Find documentation
+    for name in PRIORITY_FILES:
+        path = repo_path / name
+        if path.exists():
+            result["documentation"].append(path)
+
+    # Check docs directory
+    docs_dir = repo_path / "docs"
+    if docs_dir.exists():
+        for md_file in list(docs_dir.glob("*.md"))[:3]:
+            result["documentation"].append(md_file)
+
+    # Find config files
+    for name in CONFIG_FILES:
+        path = repo_path / name
+        if path.exists():
+            result["config"].append(path)
+
+    # Find entry points (simplified - not using glob patterns)
+    for name in ENTRY_POINT_PATTERNS:
+        if '*' not in name:  # Skip glob patterns for simplicity
+            path = repo_path / name
+            if path.exists():
+                result["entry_points"].append(path)
+
+    # Find core files in src/, lib/, pkg/, internal/
+    core_dirs = ["src", "lib", "pkg", "internal", "app"]
+    for dir_name in core_dirs:
+        dir_path = repo_path / dir_name
+        if dir_path.exists() and dir_path.is_dir():
+            # Get first few Python/JS/Go/Rust files
+            for pattern in ["*.py", "*.js", "*.ts", "*.go", "*.rs"]:
+                files = list(dir_path.glob(pattern))[:2]
+                result["core"].extend(files)
+
+    # Limit each category
+    for category in result:
+        result[category] = result[category][:MAX_FILES_PER_CATEGORY]
+
+    return result
+
+
+def read_file_safe(path: Path, max_size: int = MAX_FILE_SIZE) -> str:
+    """
+    Read a file safely with size limits.
+
+    Args:
+        path: Path to file
+        max_size: Maximum bytes to read
+
+    Returns:
+        File content or error message
+    """
+    try:
+        size = path.stat().st_size
+        if size > max_size:
+            return f"[File truncated - {size} bytes, showing first {max_size}]\n" + \
+                   path.read_text(encoding="utf-8", errors="replace")[:max_size]
+        return path.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"[Error reading file: {e}]"
+
+
+def build_repo_context(repo_path: Path, key_files: dict) -> str:
+    """
+    Build the context string for LLM analysis.
+
+    Args:
+        repo_path: Path to repository
+        key_files: Dict of categorized file paths
+
+    Returns:
+        Formatted context string
+    """
+    sections = []
+    total_size = 0
+
+    # File tree
+    tree = generate_file_tree(repo_path)
+    sections.append(f"## File Tree\n\n```\n{tree}\n```")
+    total_size += len(tree)
+
+    # Read files by category
+    for category, files in key_files.items():
+        if not files:
+            continue
+
+        category_title = category.replace("_", " ").title()
+        file_contents = []
+
+        for file_path in files:
+            if total_size >= MAX_TOTAL_CONTENT:
+                break
+
+            relative_path = file_path.relative_to(repo_path)
+            content = read_file_safe(file_path)
+            content_size = len(content)
+
+            if total_size + content_size > MAX_TOTAL_CONTENT:
+                remaining = MAX_TOTAL_CONTENT - total_size
+                content = content[:remaining] + "\n[Content truncated due to size limits]"
+                content_size = remaining
+
+            file_contents.append(f"### {relative_path}\n\n```\n{content}\n```")
+            total_size += content_size
+
+        if file_contents:
+            sections.append(f"## {category_title}\n\n" + "\n\n".join(file_contents))
+
+    return "\n\n".join(sections)
+
+
+# =============================================================================
 # Commands
 # =============================================================================
 
@@ -421,6 +719,163 @@ def clear_memory(
             typer.echo(f"Cleared today's memories for {agent}")
         else:
             typer.echo(f"No memories to clear for {agent} today")
+
+
+@app.command("summarize-repo")
+def summarize_repo(
+    url: Optional[str] = typer.Option(None, "--url", "-u", help="GitHub repository URL"),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Local repository path"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    task_id: Optional[str] = typer.Option(None, "--task-id", help="Task ID for tracking"),
+    keep_clone: bool = typer.Option(False, "--keep-clone", help="Don't delete cloned repo (for debugging)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Summarize a GitHub repository or local directory.
+
+    Analyzes repository structure, tech stack, key files, and dependencies.
+    Output is saved to artifacts or specified path.
+
+    Examples:
+
+        # Summarize a GitHub repo
+        ./bin/agent-cli.py summarize-repo --url https://github.com/user/repo
+
+        # Summarize with specific output
+        ./bin/agent-cli.py summarize-repo -u https://github.com/user/repo -o summary.md
+
+        # Summarize local directory
+        ./bin/agent-cli.py summarize-repo --path /path/to/repo
+    """
+    # Validate input
+    if not url and not path:
+        typer.echo("Error: Must specify either --url or --path", err=True)
+        raise typer.Exit(1)
+
+    if url and path:
+        typer.echo("Error: Cannot specify both --url and --path", err=True)
+        raise typer.Exit(1)
+
+    # Generate task ID
+    if not task_id:
+        task_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + str(uuid.uuid4())[:8]
+
+    temp_dir = None
+    repo_path = None
+    repo_name = "local-repo"
+
+    try:
+        # Handle GitHub URL
+        if url:
+            try:
+                owner, repo_name, clone_url = parse_github_url(url)
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1)
+
+            if verbose:
+                typer.echo(f"[REPO] Cloning {owner}/{repo_name}...")
+
+            # Create temp directory
+            temp_dir = Path(tempfile.mkdtemp(prefix="clawcrew-repo-"))
+            repo_path = temp_dir / repo_name
+
+            # Clone repository
+            if not clone_repository(clone_url, repo_path):
+                typer.echo("Error: Failed to clone repository. Is it public?", err=True)
+                raise typer.Exit(1)
+
+            if verbose:
+                typer.echo(f"[REPO] Cloned to: {repo_path}")
+
+        # Handle local path
+        else:
+            repo_path = Path(path).resolve()
+            if not repo_path.exists():
+                typer.echo(f"Error: Path does not exist: {path}", err=True)
+                raise typer.Exit(1)
+            if not repo_path.is_dir():
+                typer.echo(f"Error: Path is not a directory: {path}", err=True)
+                raise typer.Exit(1)
+            repo_name = repo_path.name
+
+            if verbose:
+                typer.echo(f"[REPO] Analyzing local directory: {repo_path}")
+
+        # Find key files
+        if verbose:
+            typer.echo("[REPO] Scanning for key files...")
+
+        key_files = find_key_files(repo_path)
+
+        if verbose:
+            for category, files in key_files.items():
+                if files:
+                    typer.echo(f"[REPO] Found {len(files)} {category} files")
+
+        # Build context
+        if verbose:
+            typer.echo("[REPO] Building analysis context...")
+
+        context = build_repo_context(repo_path, key_files)
+
+        # Build prompt for repo agent
+        source = url if url else str(repo_path)
+        prompt = f"""## Repository Analysis Task
+
+Task ID: {task_id}
+
+Analyze this repository and provide a comprehensive summary.
+
+**Source:** {source}
+**Repository Name:** {repo_name}
+
+{context}
+
+## Instructions
+
+Analyze the repository structure, identify the tech stack, key files, and dependencies.
+Follow your output format exactly.
+
+Format your analysis between these markers:
+---OUTPUT---
+[Your complete analysis here]
+---END OUTPUT---
+"""
+
+        # Call repo agent
+        if verbose:
+            typer.echo("[REPO] Calling repo agent for analysis...")
+
+        response = call_llm(prompt, "repo")
+        summary = extract_output(response)
+
+        # Determine output path
+        if output:
+            out_path = Path(output)
+        else:
+            artifacts_dir = Path.home() / ".openclaw" / "artifacts" / task_id
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
+            out_path = artifacts_dir / "repo_summary.md"
+
+        # Save output
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(summary, encoding="utf-8")
+
+        typer.echo(f"[REPO] Summary saved to: {out_path}")
+        typer.echo(f"[REPO] Task {task_id} completed.")
+
+        # Also print summary if no output file specified by user
+        if not output:
+            typer.echo("\n" + "=" * 60)
+            typer.echo(summary)
+
+    finally:
+        # Cleanup temp directory
+        if temp_dir and temp_dir.exists() and not keep_clone:
+            if verbose:
+                typer.echo(f"[REPO] Cleaning up: {temp_dir}")
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

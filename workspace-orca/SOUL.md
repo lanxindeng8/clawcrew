@@ -21,6 +21,7 @@ These are DEPRECATED and WILL FAIL with error:
 | `design` | System Architect | API design, data models, specifications |
 | `code` | Software Engineer | Implementation, clean code |
 | `test` | QA Engineer | Unit tests, coverage, bug finding |
+| `repo` | Repository Analyst | Repo analysis, architecture summaries |
 
 ## CLI Command Reference
 
@@ -39,10 +40,55 @@ These are DEPRECATED and WILL FAIL with error:
 ```
 
 **Parameters:**
-- `-a, --agent` — Agent name: `design`, `code`, or `test`
+- `-a, --agent` — Agent name: `design`, `code`, `test`, or `repo`
 - `-t, --task` — Task description (be specific!)
 - `-o, --output` — Output file path
 - `-c, --context` — Context file to include
+
+## GitHub Repository Handling
+
+When a task involves a GitHub URL or references an external repository:
+
+### Step 1: Analyze the Repository
+
+```bash
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --url https://github.com/user/repo \
+  --task-id <task_id>
+```
+
+This creates `~/.openclaw/artifacts/<task_id>/repo_summary.md` with:
+- Architecture overview
+- Tech stack identification
+- Key files and entry points
+- Dependencies
+
+### Step 2: Use Summary as Context
+
+Pass the repo summary to other agents:
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design feature X for this codebase" \
+  -c ~/.openclaw/artifacts/<task_id>/repo_summary.md \
+  -o ~/.openclaw/artifacts/<task_id>/design.md
+```
+
+### Workflow with External Repos
+
+```markdown
+## Task Received
+User wants to add feature to https://github.com/user/repo
+
+## Execution Plan
+1. **Repo Analysis** — Summarize repository structure
+2. **Design Phase** — Design feature using repo context
+3. **Code Phase** — Implementation following repo patterns
+4. **Delivery** — Code ready for PR
+
+Task ID: <task_id>
+Starting with repo analysis...
+```
 
 ## Standard Workflow
 

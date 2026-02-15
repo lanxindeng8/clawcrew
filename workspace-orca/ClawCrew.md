@@ -36,6 +36,7 @@ design.md      main.py      test_main.py
 | `design` | System Architect | workspace-design | API design, data models, specifications |
 | `code` | Software Engineer | workspace-code | Implementation, clean code, type hints |
 | `test` | QA Engineer | workspace-test | Unit tests, edge cases, coverage |
+| `repo` | Repository Analyst | workspace-repo | Repo analysis, architecture summaries, dependency mapping |
 
 ## CLI Usage
 
@@ -90,6 +91,68 @@ design.md      main.py      test_main.py
 ~/.openclaw/bin/agent-cli.py clear-memory -a design --all
 ```
 
+## Repository Analysis
+
+Analyze GitHub repositories or local directories to understand their architecture.
+
+### Summarize a Repository
+
+```bash
+~/.openclaw/bin/agent-cli.py summarize-repo --url https://github.com/user/repo
+```
+
+**Options:**
+| Flag | Long | Description |
+|------|------|-------------|
+| `-u` | `--url` | GitHub repository URL |
+| `-p` | `--path` | Local repository path |
+| `-o` | `--output` | Output file path |
+| `--task-id` | | Task ID for tracking |
+| `--keep-clone` | | Don't delete temp clone |
+| `-v` | `--verbose` | Show detailed output |
+
+### Examples
+
+```bash
+# Summarize GitHub repo
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --url https://github.com/pallets/flask
+
+# Summarize local project
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --path ~/projects/my-app \
+  --output ~/notes/my-app-summary.md
+
+# With task tracking
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  -u https://github.com/user/repo \
+  --task-id 20240214-120000
+```
+
+### Output Location
+
+By default, summaries are saved to:
+```
+~/.openclaw/artifacts/<task_id>/repo_summary.md
+```
+
+### Using with Other Agents
+
+Pass repo summary as context for development tasks:
+
+```bash
+# First, analyze the repo
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --url https://github.com/user/repo \
+  --task-id task-001
+
+# Then, design a feature using the context
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design a caching middleware for this API" \
+  -c ~/.openclaw/artifacts/task-001/repo_summary.md \
+  -o ~/.openclaw/artifacts/task-001/design.md
+```
+
 ## Workflow Example
 
 **User Request:** "Create a Python function to validate email addresses"
@@ -140,7 +203,8 @@ clawcrew/
 │   └── <task-id>/
 │       ├── design.md
 │       ├── main.py
-│       └── test_main.py
+│       ├── test_main.py
+│       └── repo_summary.md
 ├── workspace-orca/       # Orchestrator
 │   ├── SOUL.md          # Personality & instructions
 │   ├── ClawCrew.md      # This file
@@ -152,6 +216,9 @@ clawcrew/
 │   ├── SOUL.md
 │   └── memory/
 ├── workspace-test/       # Test agent
+│   ├── SOUL.md
+│   └── memory/
+├── workspace-repo/       # Repository analyst
 │   ├── SOUL.md
 │   └── memory/
 ├── setup.sh             # Installation script
@@ -194,7 +261,7 @@ sessions_spawn("design", ...)
 
 ### All Agents are Registered
 
-All 4 agents (orca, design, code, test) are registered in OpenClaw. OrcaBot receives Telegram messages and orchestrates the others via CLI.
+All 5 agents (orca, design, code, test, repo) are registered in OpenClaw. OrcaBot receives Telegram messages and orchestrates the others via CLI.
 
 ### Artifacts are Gitignored
 

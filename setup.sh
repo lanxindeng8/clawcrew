@@ -63,7 +63,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     echo "================================================"
     echo ""
     echo "This will remove:"
-    echo "  - ClawCrew agents (orca, design, code, test)"
+    echo "  - ClawCrew agents (orca, design, code, test, repo)"
     echo "  - OrcaBot Telegram binding"
     echo "  - Broadcast entries"
     echo "  - Telegram account (optional)"
@@ -72,7 +72,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
 
     # Show current ClawCrew accounts
     echo "--- Current ClawCrew Configuration ---"
-    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test", "repo"))) | length' "$OPENCLAW_CONFIG")
     echo "  ClawCrew agents installed: $CLAWCREW_AGENTS"
 
     ORCA_BINDINGS=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
@@ -109,14 +109,14 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     if [ -n "$REMOVE_ACCOUNT" ]; then
         jq --arg acc "$REMOVE_ACCOUNT" '
         # Remove all ClawCrew agents
-        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test", "repo") | not)]
         # Remove ClawCrew bindings
-        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test", "repo") | not)]
         # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test", "repo") | not)] | select(.value | length > 0)
               end
             ))
           else . end
@@ -127,14 +127,14 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     else
         jq '
         # Remove all ClawCrew agents
-        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test", "repo") | not)]
         # Remove ClawCrew bindings
-        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test", "repo") | not)]
         # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test", "repo") | not)] | select(.value | length > 0)
               end
             ))
           else . end
@@ -144,7 +144,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
 
     # Remove workspace folders
     if [ "$REMOVE_WORKSPACES" = "y" ] || [ "$REMOVE_WORKSPACES" = "Y" ]; then
-        for workspace in workspace-orca workspace-design workspace-code workspace-test; do
+        for workspace in workspace-orca workspace-design workspace-code workspace-test workspace-repo; do
             if [ -d "$OPENCLAW_DIR/$workspace" ]; then
                 rm -rf "$OPENCLAW_DIR/$workspace"
                 echo "[3/4] Removed $OPENCLAW_DIR/$workspace"
@@ -362,7 +362,7 @@ ALLOWED_IDS_JSON=$(echo "$ALLOWED_IDS" | tr ',' '\n' | jq -R . | jq -s .)
 cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup.$(date +%Y%m%d%H%M%S)"
 echo "[1/5] Backed up original config"
 
-# Create the agents JSON array (all 4 agents)
+# Create the agents JSON array (all 5 agents)
 AGENTS_JSON=$(cat <<EOF
 [
   {
@@ -372,7 +372,7 @@ AGENTS_JSON=$(cat <<EOF
     "model": "anthropic/claude-sonnet-4-5",
     "identity": { "name": "OrcaBot" },
     "groupChat": { "mentionPatterns": ["@orca", "@OrcaBot"] },
-    "subagents": { "allowAgents": ["design", "code", "test"] }
+    "subagents": { "allowAgents": ["design", "code", "test", "repo"] }
   },
   {
     "id": "design",
@@ -394,6 +394,13 @@ AGENTS_JSON=$(cat <<EOF
     "workspace": "$OPENCLAW_DIR/workspace-test",
     "model": "anthropic/claude-sonnet-4-5",
     "identity": { "name": "TestBot" }
+  },
+  {
+    "id": "repo",
+    "name": "RepoBot",
+    "workspace": "$OPENCLAW_DIR/workspace-repo",
+    "model": "anthropic/claude-sonnet-4-5",
+    "identity": { "name": "RepoBot" }
   }
 ]
 EOF
@@ -492,12 +499,12 @@ jq --argjson agents "$AGENTS_JSON" \
 
 echo "[2/5] Updated openclaw.json with required settings"
 
-echo "[3/5] Added ClawCrew agents (orca, design, code, test) and Telegram binding"
+echo "[3/5] Added ClawCrew agents (orca, design, code, test, repo) and Telegram binding"
 
 # Copy workspace folders and bin
 echo "[4/5] Copying files..."
 
-for workspace in workspace-orca workspace-design workspace-code workspace-test; do
+for workspace in workspace-orca workspace-design workspace-code workspace-test workspace-repo; do
     if [ -d "$SCRIPT_DIR/$workspace" ]; then
         cp -r "$SCRIPT_DIR/$workspace" "$OPENCLAW_DIR/"
         echo "  Copied $workspace"
@@ -549,11 +556,11 @@ else
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
-VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
-if [ "$VERIFY_AGENTS" -eq 4 ]; then
-    echo "  ✓  All ClawCrew agents added (orca, design, code, test)"
+VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test", "repo"))) | length' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_AGENTS" -eq 5 ]; then
+    echo "  ✓  All ClawCrew agents added (orca, design, code, test, repo)"
 else
-    echo "  ✗  Expected 4 ClawCrew agents, found $VERIFY_AGENTS"
+    echo "  ✗  Expected 5 ClawCrew agents, found $VERIFY_AGENTS"
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
