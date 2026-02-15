@@ -515,14 +515,20 @@ echo "================================================"
 echo "  ClawCrew is ready!"
 echo "================================================"
 echo ""
-echo "Next steps:"
-echo "  1. Restart OpenClaw gateway:"
-echo "     openclaw gateway restart"
+
+# Restart OpenClaw gateway
+echo "Restarting OpenClaw gateway..."
+if command -v openclaw &> /dev/null; then
+    openclaw gateway restart && echo "  ✓  Gateway restarted"
+else
+    echo "  ⚠️  openclaw command not found. Please restart manually:"
+    echo "     openclaw gateway restart"
+fi
+
 echo ""
-echo "  2. Send a message in your Telegram group:"
-echo "     'Create a Python module to calculate distance between two points'"
-echo ""
-echo "  3. Watch OrcaBot coordinate the team!"
+echo "Try it out:"
+echo "  Send a message in your Telegram group:"
+echo "  'Create a Python function to validate email addresses'"
 echo ""
 echo "Installed at $OPENCLAW_DIR/:"
 echo "  workspace-orca/    — Orchestrator"
