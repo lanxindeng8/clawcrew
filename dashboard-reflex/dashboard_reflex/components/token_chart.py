@@ -312,21 +312,53 @@ def token_trend_chart() -> rx.Component:
 
 
 def token_usage_section() -> rx.Component:
-    """Combined token usage section with ring chart and trend."""
-    return rx.el.div(
-        rx.text(
-            "📊 Token Usage",
-            font_size="1.1rem",
-            font_weight="600",
-            color=COLORS["text_primary"],
+    """Combined token usage section with ring chart and trend - optimized for right panel."""
+    return rx.vstack(
+        # Header
+        rx.hstack(
+            rx.el.div(
+                "📊",
+                style={
+                    "width": "28px",
+                    "height": "28px",
+                    "display": "flex",
+                    "align_items": "center",
+                    "justify_content": "center",
+                    "background": f"{COLORS['accent_cyan']}15",
+                    "border_radius": "8px",
+                    "font_size": "0.9rem",
+                }
+            ),
+            rx.vstack(
+                rx.text(
+                    "Token Usage",
+                    font_size="0.95rem",
+                    font_weight="600",
+                    color=COLORS["text_primary"],
+                ),
+                rx.text(
+                    "Real-time consumption",
+                    font_size="0.65rem",
+                    color=COLORS["text_muted"],
+                ),
+                spacing="0",
+                align="start",
+            ),
+            spacing="2",
+            align="center",
+            width="100%",
             margin_bottom="1rem",
         ),
-        rx.hstack(
-            token_ring_chart(),
+
+        # Ring chart (compact)
+        token_ring_chart(),
+
+        # Trend chart
+        rx.el.div(
             token_trend_chart(),
-            spacing="4",
-            width="100%",
-            align="start",
-            wrap="wrap",
+            margin_top="1rem",
         ),
+
+        spacing="0",
+        width="100%",
     )

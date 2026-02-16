@@ -137,6 +137,7 @@ class DashboardState(rx.State):
     # === Task Pipeline ===
     current_task_name: str = "Create email validation function"
     current_task_id: str = "20240214-153042"
+    current_task_started: str = "2 min ago"
     task_steps: List[TaskStep] = [
         TaskStep(name="Orchestrate", agent="Orca", emoji="🦑", status="completed", duration="0.8s", tokens_used=320),
         TaskStep(name="Design", agent="Design", emoji="🎨", status="completed", duration="2.4s", tokens_used=850),

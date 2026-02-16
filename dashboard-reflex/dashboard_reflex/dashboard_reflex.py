@@ -53,40 +53,72 @@ def right_panel_toggle() -> rx.Component:
 
 
 def right_panel() -> rx.Component:
-    """Right side panel with Token Usage and Live Logs."""
+    """Right side panel with Token Usage and Live Logs - modern Linear/Vercel style."""
     return rx.el.div(
-        # Panel header
-        rx.hstack(
+        # Panel header with glassmorphism
+        rx.el.div(
             rx.hstack(
-                rx.text("📊", font_size="1rem"),
-                rx.text(
-                    "MONITORING",
-                    font_size="0.7rem",
-                    font_weight="700",
-                    letter_spacing="1.5px",
-                    color=COLORS["text_muted"],
+                rx.el.div(
+                    rx.hstack(
+                        rx.el.div(
+                            "📊",
+                            style={
+                                "width": "32px",
+                                "height": "32px",
+                                "display": "flex",
+                                "align_items": "center",
+                                "justify_content": "center",
+                                "background": f"linear-gradient(135deg, {COLORS['primary']}25, {COLORS['secondary']}15)",
+                                "border_radius": "10px",
+                                "font_size": "0.95rem",
+                            }
+                        ),
+                        rx.vstack(
+                            rx.text(
+                                "Monitoring",
+                                font_size="1rem",
+                                font_weight="600",
+                                color=COLORS["text_primary"],
+                            ),
+                            rx.text(
+                                "Real-time insights",
+                                font_size="0.65rem",
+                                color=COLORS["text_muted"],
+                            ),
+                            spacing="0",
+                            align="start",
+                        ),
+                        spacing="3",
+                        align="center",
+                    ),
                 ),
-                spacing="2",
+                rx.spacer(),
+                rx.el.button(
+                    "✕",
+                    style={
+                        "background": "rgba(255,255,255,0.05)",
+                        "border": "none",
+                        "border_radius": "8px",
+                        "width": "28px",
+                        "height": "28px",
+                        "cursor": "pointer",
+                        "color": COLORS["text_muted"],
+                        "font_size": "0.85rem",
+                        "transition": "all 0.2s ease",
+                        "_hover": {
+                            "background": "rgba(255,255,255,0.1)",
+                            "color": COLORS["text_primary"],
+                        },
+                    },
+                    on_click=DashboardState.toggle_right_panel,
+                ),
+                width="100%",
             ),
-            rx.spacer(),
-            rx.el.button(
-                "✕",
-                style={
-                    "background": "rgba(255,255,255,0.05)",
-                    "border": "none",
-                    "border_radius": "6px",
-                    "width": "24px",
-                    "height": "24px",
-                    "cursor": "pointer",
-                    "color": COLORS["text_muted"],
-                    "font_size": "0.8rem",
-                    "_hover": {"background": "rgba(255,255,255,0.1)"},
-                },
-                on_click=DashboardState.toggle_right_panel,
-            ),
-            width="100%",
-            padding="1rem 1.25rem",
-            border_bottom=f"1px solid {COLORS['border_subtle']}",
+            style={
+                "padding": "1rem 1.25rem",
+                "border_bottom": f"1px solid {COLORS['border_subtle']}",
+                "background": "rgba(255, 255, 255, 0.02)",
+            }
         ),
 
         # Scrollable content
@@ -94,11 +126,18 @@ def right_panel() -> rx.Component:
             # Token Usage Section
             token_usage_section(),
 
-            # Live Logs Section
+            # Divider
             rx.el.div(
-                live_logs(),
-                margin_top="1.5rem",
+                style={
+                    "height": "1px",
+                    "width": "100%",
+                    "background": f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                    "margin": "1.5rem 0",
+                }
             ),
+
+            # Live Logs Section
+            live_logs(),
 
             style={
                 "padding": "1.25rem",
@@ -110,7 +149,7 @@ def right_panel() -> rx.Component:
         style={
             "width": "380px",
             "height": "100vh",
-            "background": "linear-gradient(180deg, rgba(12,12,20,0.98) 0%, rgba(8,8,14,0.98) 100%)",
+            "background": "linear-gradient(180deg, rgba(10,10,22,0.98) 0%, rgba(6,6,14,0.99) 100%)",
             "border_left": f"1px solid {COLORS['border_subtle']}",
             "backdrop_filter": "blur(30px)",
             "display": "flex",
@@ -119,7 +158,7 @@ def right_panel() -> rx.Component:
             "right": "0",
             "top": "0",
             "z_index": "50",
-            "transition": "transform 0.3s ease",
+            "transition": "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             "transform": rx.cond(
                 DashboardState.right_panel_collapsed,
                 "translateX(100%)",
@@ -136,153 +175,122 @@ def right_panel() -> rx.Component:
 def virtual_office() -> rx.Component:
     """
     Virtual Office with management and workers sections.
-    Modern glassmorphism design with office background.
+    Modern Linear/Vercel-style glassmorphism design.
     """
     return rx.el.div(
-        # Office header badge
-        rx.center(
+        # Header section
+        rx.hstack(
+            rx.hstack(
+                rx.el.div(
+                    "🏢",
+                    style={
+                        "width": "40px",
+                        "height": "40px",
+                        "display": "flex",
+                        "align_items": "center",
+                        "justify_content": "center",
+                        "background": f"linear-gradient(135deg, {COLORS['primary']}30, {COLORS['secondary']}20)",
+                        "border_radius": "12px",
+                        "font_size": "1.2rem",
+                    }
+                ),
+                rx.vstack(
+                    rx.text(
+                        "Virtual Office",
+                        font_size="1.15rem",
+                        font_weight="600",
+                        color=COLORS["text_primary"],
+                    ),
+                    rx.text(
+                        "Agent workspace overview",
+                        font_size="0.7rem",
+                        color=COLORS["text_muted"],
+                    ),
+                    spacing="0",
+                    align="start",
+                ),
+                spacing="3",
+                align="center",
+            ),
+            rx.spacer(),
+            # Active agent count badge
             rx.el.div(
                 rx.hstack(
-                    rx.text("🏢", font_size="1rem"),
+                    rx.el.div(
+                        style={
+                            "width": "8px",
+                            "height": "8px",
+                            "border_radius": "50%",
+                            "background": COLORS["status_online"],
+                            "animation": "status-pulse 1.5s infinite",
+                        }
+                    ),
                     rx.text(
-                        "VIRTUAL OFFICE",
-                        font_weight="700",
-                        letter_spacing="2px",
-                        font_size="0.75rem",
+                        f"{DashboardState.active_agents_count} Active",
+                        font_size="0.8rem",
+                        font_weight="500",
+                        color=COLORS["status_online"],
                     ),
                     spacing="2",
+                    align="center",
                 ),
                 style={
-                    "background": f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['primary_dark']})",
-                    "color": "white",
-                    "padding": "10px 24px",
-                    "border_radius": "25px",
-                    "box_shadow": f"0 4px 20px {COLORS['primary']}40",
+                    "padding": "6px 14px",
+                    "background": f"{COLORS['status_online']}15",
+                    "border_radius": "20px",
+                    "border": f"1px solid {COLORS['status_online']}30",
                 }
             ),
+            width="100%",
             margin_bottom="1.5rem",
         ),
 
-        # Workflow pipeline
-        rx.center(
+        # Workflow pipeline (compact)
+        rx.el.div(
             rx.hstack(
-                rx.el.span("🦑 Orca", style={"background": AGENT_COLORS["Orca"], "color": "white", "padding": "6px 14px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color=COLORS["primary"], font_weight="bold", font_size="1.2rem"),
-                rx.el.span("🎨 Design", style={"background": AGENT_COLORS["Design"], "color": "white", "padding": "6px 14px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color=COLORS["primary"], font_weight="bold", font_size="1.2rem"),
-                rx.el.span("💻 Code", style={"background": AGENT_COLORS["Code"], "color": "white", "padding": "6px 14px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color=COLORS["primary"], font_weight="bold", font_size="1.2rem"),
-                rx.el.span("🧪 Test", style={"background": AGENT_COLORS["Test"], "color": "white", "padding": "6px 14px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color=COLORS["primary"], font_weight="bold", font_size="1.2rem"),
-                rx.el.span("🐙 GitHub", style={"background": AGENT_COLORS["GitHub"], "color": "white", "padding": "6px 14px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+                rx.el.span("🦑 Orca", style={"background": f"{AGENT_COLORS['Orca']}20", "color": AGENT_COLORS["Orca"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Orca']}40"}),
+                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.el.span("🎨 Design", style={"background": f"{AGENT_COLORS['Design']}20", "color": AGENT_COLORS["Design"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Design']}40"}),
+                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.el.span("💻 Code", style={"background": f"{AGENT_COLORS['Code']}20", "color": AGENT_COLORS["Code"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Code']}40"}),
+                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.el.span("🧪 Test", style={"background": f"{AGENT_COLORS['Test']}20", "color": AGENT_COLORS["Test"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Test']}40"}),
+                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.el.span("🐙 GitHub", style={"background": f"{AGENT_COLORS['GitHub']}20", "color": AGENT_COLORS["GitHub"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['GitHub']}40"}),
                 spacing="2",
                 wrap="wrap",
                 justify="center",
             ),
-            margin_bottom="2rem",
+            style={
+                "padding": "1rem",
+                "background": "rgba(255, 255, 255, 0.02)",
+                "border_radius": "14px",
+                "margin_bottom": "1.5rem",
+            }
         ),
 
-        # Main office layout
-        rx.hstack(
-            # LEFT: Management area
-            rx.el.div(
-                rx.el.div(
-                    rx.hstack(
-                        rx.text("👔", font_size="0.9rem"),
-                        rx.text(
-                            "MANAGEMENT",
-                            font_size="0.7rem",
-                            font_weight="600",
-                            letter_spacing="1.5px",
-                        ),
-                        spacing="2",
-                        justify="center",
-                    ),
-                    style={
-                        "color": COLORS["text_muted"],
-                        "margin_bottom": "1.25rem",
-                        "text_align": "center",
-                    }
-                ),
-                rx.el.div(
-                    rx.foreach(
-                        DashboardState.agents[:2],  # Orca and Audit
-                        agent_card,
-                    ),
-                    style={
-                        "display": "flex",
-                        "flex_direction": "column",
-                        "gap": "1.25rem",
-                        "align_items": "center",
-                    }
-                ),
-                style={
-                    "padding": "1.5rem",
-                    "background": f"linear-gradient(145deg, {COLORS['primary']}08, transparent)",
-                    "border_radius": "24px",
-                    "border": f"2px dashed {COLORS['primary']}25",
-                }
+        # Main office layout - grid of agent cards
+        rx.el.div(
+            rx.foreach(
+                DashboardState.agents,
+                agent_card,
             ),
-
-            # RIGHT: Worker area (2x2 grid)
-            rx.el.div(
-                rx.el.div(
-                    rx.hstack(
-                        rx.text("⚙️", font_size="0.9rem"),
-                        rx.text(
-                            "WORKERS",
-                            font_size="0.7rem",
-                            font_weight="600",
-                            letter_spacing="1.5px",
-                        ),
-                        spacing="2",
-                        justify="center",
-                    ),
-                    style={
-                        "color": COLORS["text_muted"],
-                        "margin_bottom": "1.25rem",
-                        "text_align": "center",
-                    }
-                ),
-                rx.el.div(
-                    rx.foreach(
-                        DashboardState.agents[2:],  # Design, Code, Test, GitHub
-                        agent_card,
-                    ),
-                    style={
-                        "display": "grid",
-                        "grid_template_columns": "repeat(2, 200px)",
-                        "gap": "1.25rem",
-                        "justify_content": "center",
-                    }
-                ),
-                style={
-                    "flex": "1",
-                    "padding": "1.5rem",
-                    "background": f"linear-gradient(145deg, {COLORS['accent_cyan']}05, transparent)",
-                    "border_radius": "24px",
-                    "border": f"2px dashed {COLORS['accent_cyan']}20",
-                }
-            ),
-            spacing="6",
-            width="100%",
-            align="start",
-            wrap="wrap",
+            style={
+                "display": "grid",
+                "grid_template_columns": "repeat(auto-fill, minmax(300px, 1fr))",
+                "gap": "1rem",
+                "width": "100%",
+            }
         ),
 
-        # Container styles with background
+        # Container styles
         style={
             "width": "100%",
-            "background": f"""
-                linear-gradient(135deg, rgba(10,10,15,0.95) 0%, rgba(18,18,28,0.92) 100%),
-                url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80')
-            """,
-            "background_size": "cover",
-            "background_position": "center",
-            "border_radius": "28px",
+            "background": "rgba(15, 15, 28, 0.7)",
+            "backdrop_filter": "blur(24px)",
+            "border_radius": "24px",
             "border": f"1px solid {COLORS['border_subtle']}",
-            "box_shadow": "0 20px 60px rgba(0, 0, 0, 0.4)",
-            "padding": "2rem",
+            "padding": "1.5rem",
         }
     )
 

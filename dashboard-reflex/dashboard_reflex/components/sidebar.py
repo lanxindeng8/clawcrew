@@ -1,20 +1,27 @@
 """
 Sidebar Component
-Responsive navigation sidebar with collapse support.
+Collapsible navigation sidebar with modern Linear/Vercel-style design.
 """
 
 import reflex as rx
-from ..theme import COLORS
+from ..theme import COLORS, GRADIENT_PRIMARY
 from ..state import DashboardState
 
 
 def nav_item(icon: str, label: str, page: str) -> rx.Component:
-    """Navigation menu item."""
+    """Navigation menu item with pill-shaped active indicator."""
     is_active = DashboardState.current_page == page
 
     return rx.el.button(
         rx.hstack(
-            rx.text(icon, font_size="1.1rem"),
+            rx.el.div(
+                icon,
+                style={
+                    "font_size": "1.1rem",
+                    "width": "24px",
+                    "text_align": "center",
+                }
+            ),
             rx.cond(
                 ~DashboardState.sidebar_collapsed,
                 rx.text(
@@ -26,19 +33,20 @@ def nav_item(icon: str, label: str, page: str) -> rx.Component:
             ),
             spacing="3",
             width="100%",
+            align="center",
         ),
         style={
             "width": "100%",
-            "padding": "0.875rem 1rem",
-            "border_radius": "12px",
+            "padding": "10px 14px",
+            "border_radius": "10px",
             "background": rx.cond(
                 is_active,
-                f"linear-gradient(135deg, {COLORS['primary']}30, {COLORS['primary']}10)",
+                f"linear-gradient(135deg, {COLORS['primary']}20, {COLORS['secondary']}12)",
                 "transparent",
             ),
             "border": rx.cond(
                 is_active,
-                f"1px solid {COLORS['primary']}40",
+                f"1px solid {COLORS['border_accent']}",
                 "1px solid transparent",
             ),
             "color": rx.cond(
@@ -52,17 +60,42 @@ def nav_item(icon: str, label: str, page: str) -> rx.Component:
             "_hover": {
                 "background": rx.cond(
                     is_active,
-                    f"linear-gradient(135deg, {COLORS['primary']}35, {COLORS['primary']}15)",
-                    "rgba(255, 255, 255, 0.05)",
+                    f"linear-gradient(135deg, {COLORS['primary']}25, {COLORS['secondary']}15)",
+                    "rgba(124, 58, 237, 0.08)",
                 ),
+                "color": COLORS["text_primary"],
             },
         },
         on_click=lambda: DashboardState.navigate(page),
     )
 
 
+def mini_sparkline(data: list, color: str) -> rx.Component:
+    """Mini sparkline chart for agent activity."""
+    # Simple SVG sparkline
+    width = 40
+    height = 16
+
+    return rx.el.svg(
+        # Simple line approximation
+        rx.el.path(
+            d="M 0 12 L 8 8 L 16 10 L 24 6 L 32 8 L 40 4",
+            fill="none",
+            stroke=color,
+            stroke_width="1.5",
+            stroke_linecap="round",
+            stroke_linejoin="round",
+            opacity="0.7",
+        ),
+        width=str(width),
+        height=str(height),
+        viewBox=f"0 0 {width} {height}",
+        style={"opacity": "0.8"},
+    )
+
+
 def agent_list_item(agent) -> rx.Component:
-    """Compact agent status in sidebar."""
+    """Compact agent status in sidebar with activity sparkline."""
     status_color = rx.match(
         agent.status,
         ("online", COLORS["status_online"]),
@@ -73,55 +106,83 @@ def agent_list_item(agent) -> rx.Component:
     )
 
     return rx.hstack(
-        rx.text(agent.emoji, font_size="1rem"),
+        # Avatar
+        rx.el.div(
+            agent.emoji,
+            style={
+                "font_size": "1rem",
+                "width": "32px",
+                "height": "32px",
+                "display": "flex",
+                "align_items": "center",
+                "justify_content": "center",
+                "background": f"{agent.color}15",
+                "border_radius": "8px",
+                "flex_shrink": "0",
+            }
+        ),
         rx.cond(
             ~DashboardState.sidebar_collapsed,
             rx.fragment(
                 rx.vstack(
                     rx.text(
                         agent.name,
-                        font_size="0.8rem",
+                        font_size="0.85rem",
                         font_weight="500",
                         color=COLORS["text_primary"],
                     ),
-                    rx.text(
-                        agent.role,
-                        font_size="0.65rem",
-                        color=COLORS["text_muted"],
+                    rx.hstack(
+                        # Status dot
+                        rx.el.div(
+                            style={
+                                "width": "6px",
+                                "height": "6px",
+                                "border_radius": "50%",
+                                "background": status_color,
+                                "box_shadow": rx.cond(
+                                    agent.status == "working",
+                                    f"0 0 6px {COLORS['status_working']}",
+                                    "none",
+                                ),
+                            }
+                        ),
+                        rx.text(
+                            agent.status.to(str).title(),
+                            font_size="0.7rem",
+                            color=COLORS["text_muted"],
+                        ),
+                        spacing="1",
+                        align="center",
                     ),
                     spacing="0",
                     align="start",
                     flex="1",
                 ),
-                rx.el.div(
-                    style={
-                        "width": "8px",
-                        "height": "8px",
-                        "border_radius": "50%",
-                        "background": status_color,
-                        "box_shadow": rx.cond(
-                            agent.status == "working",
-                            f"0 0 8px {COLORS['status_working']}",
-                            "none",
-                        ),
-                    }
-                ),
+                # Sparkline
+                mini_sparkline(agent.token_history, agent.color),
             ),
             rx.fragment(),
         ),
-        spacing="2",
+        spacing="3",
         width="100%",
-        padding="0.5rem 0.75rem",
-        border_radius="8px",
+        padding="8px 10px",
+        border_radius="10px",
         cursor="pointer",
-        _hover={"background": "rgba(255, 255, 255, 0.03)"},
+        align="center",
+        style={
+            "transition": "all 0.15s ease",
+            "_hover": {
+                "background": "rgba(255, 255, 255, 0.04)",
+            },
+        },
         on_click=lambda: DashboardState.open_agent_drawer(agent.id),
     )
 
 
 def sidebar() -> rx.Component:
     """
-    Responsive sidebar with navigation and agent list.
+    Collapsible sidebar with navigation and agent list.
+    Linear/Vercel-style design with modern aesthetics.
     """
     return rx.el.aside(
         rx.vstack(
@@ -130,15 +191,15 @@ def sidebar() -> rx.Component:
                 rx.el.div(
                     "🦞",
                     style={
-                        "font_size": "2rem",
-                        "width": "48px",
-                        "height": "48px",
+                        "font_size": "1.8rem",
+                        "width": "44px",
+                        "height": "44px",
                         "display": "flex",
                         "align_items": "center",
                         "justify_content": "center",
-                        "background": f"linear-gradient(135deg, {COLORS['primary']}30, {COLORS['primary']}10)",
-                        "border_radius": "14px",
-                        "border": f"1px solid {COLORS['primary']}30",
+                        "background": f"linear-gradient(135deg, {COLORS['primary']}25, {COLORS['secondary']}15)",
+                        "border_radius": "12px",
+                        "border": f"1px solid {COLORS['border_accent']}",
                     }
                 ),
                 rx.cond(
@@ -146,10 +207,10 @@ def sidebar() -> rx.Component:
                     rx.vstack(
                         rx.text(
                             "ClawCrew",
-                            font_size="1.2rem",
+                            font_size="1.15rem",
                             font_weight="700",
                             color=COLORS["text_primary"],
-                            letter_spacing="0.5px",
+                            letter_spacing="0.3px",
                         ),
                         rx.text(
                             "AI Agent Dashboard",
@@ -164,41 +225,46 @@ def sidebar() -> rx.Component:
                 spacing="3",
                 align="center",
                 width="100%",
-                padding="0.5rem",
-                margin_bottom="1rem",
+                padding="4px",
             ),
 
-            # Collapse button
+            # Collapse toggle button
             rx.el.button(
                 rx.cond(
                     DashboardState.sidebar_collapsed,
-                    rx.text("→", font_size="1rem"),
-                    rx.text("←", font_size="1rem"),
+                    rx.text("»", font_size="1rem", font_weight="bold"),
+                    rx.text("«", font_size="1rem", font_weight="bold"),
                 ),
                 style={
                     "position": "absolute",
-                    "right": "-12px",
-                    "top": "70px",
-                    "width": "24px",
-                    "height": "24px",
+                    "right": "-14px",
+                    "top": "60px",
+                    "width": "28px",
+                    "height": "28px",
                     "border_radius": "50%",
                     "background": COLORS["bg_dark"],
-                    "border": f"1px solid {COLORS['border_subtle']}",
+                    "border": f"1px solid {COLORS['border_muted']}",
                     "color": COLORS["text_secondary"],
                     "cursor": "pointer",
                     "display": "flex",
                     "align_items": "center",
                     "justify_content": "center",
-                    "z_index": "10",
+                    "z_index": "110",
+                    "transition": "all 0.2s ease",
                     "_hover": {
                         "background": COLORS["primary"],
+                        "border_color": COLORS["primary"],
                         "color": "white",
+                        "transform": "scale(1.1)",
                     },
                 },
                 on_click=DashboardState.toggle_sidebar,
             ),
 
-            # Navigation
+            # Spacer
+            rx.el.div(style={"height": "20px"}),
+
+            # Navigation section
             rx.el.div(
                 rx.cond(
                     ~DashboardState.sidebar_collapsed,
@@ -206,10 +272,10 @@ def sidebar() -> rx.Component:
                         "NAVIGATION",
                         font_size="0.65rem",
                         font_weight="600",
-                        color=COLORS["text_muted"],
-                        letter_spacing="1px",
-                        margin_bottom="0.5rem",
-                        padding_left="0.5rem",
+                        color=COLORS["text_dim"],
+                        letter_spacing="1.2px",
+                        margin_bottom="8px",
+                        padding_left="6px",
                     ),
                     rx.fragment(),
                 ),
@@ -219,19 +285,20 @@ def sidebar() -> rx.Component:
                     nav_item("📁", "Artifacts", "artifacts"),
                     nav_item("📋", "Logs", "logs"),
                     nav_item("⚙️", "Settings", "settings"),
-                    spacing="1",
+                    spacing="2",
                     width="100%",
                 ),
                 width="100%",
-                margin_bottom="1.5rem",
+                margin_bottom="20px",
             ),
 
+            # Divider
             rx.el.div(
                 style={
                     "height": "1px",
                     "width": "100%",
-                    "background": COLORS["border_subtle"],
-                    "margin": "0.5rem 0",
+                    "background": f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                    "margin": "8px 0",
                 }
             ),
 
@@ -239,81 +306,174 @@ def sidebar() -> rx.Component:
             rx.el.div(
                 rx.cond(
                     ~DashboardState.sidebar_collapsed,
-                    rx.text(
-                        "AGENTS",
-                        font_size="0.65rem",
-                        font_weight="600",
-                        color=COLORS["text_muted"],
-                        letter_spacing="1px",
-                        margin_bottom="0.5rem",
-                        padding_left="0.5rem",
+                    rx.hstack(
+                        rx.text(
+                            "AGENTS",
+                            font_size="0.65rem",
+                            font_weight="600",
+                            color=COLORS["text_dim"],
+                            letter_spacing="1.2px",
+                        ),
+                        rx.spacer(),
+                        rx.el.div(
+                            rx.text(
+                                DashboardState.active_agents_count,
+                                font_size="0.65rem",
+                                font_weight="600",
+                                color=COLORS["status_online"],
+                            ),
+                            style={
+                                "padding": "2px 8px",
+                                "background": f"{COLORS['status_online']}15",
+                                "border_radius": "10px",
+                            }
+                        ),
+                        width="100%",
+                        margin_bottom="8px",
+                        padding_left="6px",
+                        padding_right="6px",
                     ),
                     rx.fragment(),
                 ),
-                rx.vstack(
+                rx.el.div(
                     rx.foreach(
                         DashboardState.agents,
                         agent_list_item,
                     ),
-                    spacing="1",
-                    width="100%",
+                    style={
+                        "display": "flex",
+                        "flex_direction": "column",
+                        "gap": "4px",
+                        "width": "100%",
+                    }
                 ),
                 width="100%",
                 flex="1",
                 overflow_y="auto",
+                overflow_x="hidden",
+                padding_right="4px",
             ),
 
             rx.spacer(),
 
             # Footer controls
             rx.el.div(
+                # Auto-refresh toggle
                 rx.hstack(
                     rx.cond(
                         ~DashboardState.sidebar_collapsed,
-                        rx.text(
-                            "Auto-refresh",
-                            font_size="0.8rem",
-                            color=COLORS["text_secondary"],
+                        rx.hstack(
+                            rx.el.div(
+                                style={
+                                    "width": "6px",
+                                    "height": "6px",
+                                    "border_radius": "50%",
+                                    "background": rx.cond(
+                                        DashboardState.auto_refresh,
+                                        COLORS["status_online"],
+                                        COLORS["status_offline"],
+                                    ),
+                                }
+                            ),
+                            rx.text(
+                                "Auto-refresh",
+                                font_size="0.8rem",
+                                color=COLORS["text_secondary"],
+                            ),
+                            spacing="2",
+                            align="center",
                         ),
                         rx.fragment(),
                     ),
+                    rx.spacer(),
                     rx.switch(
                         checked=DashboardState.auto_refresh,
                         on_change=DashboardState.toggle_auto_refresh,
                         color_scheme="purple",
+                        size="1",
                     ),
                     justify="between",
                     width="100%",
+                    padding="8px 4px",
                 ),
+
+                # Refresh button
                 rx.el.button(
                     rx.hstack(
-                        rx.text("🔄", font_size="0.9rem"),
+                        rx.cond(
+                            DashboardState.is_loading,
+                            rx.el.div(
+                                style={
+                                    "width": "14px",
+                                    "height": "14px",
+                                    "border": "2px solid rgba(255,255,255,0.3)",
+                                    "border_top_color": "white",
+                                    "border_radius": "50%",
+                                    "animation": "spin 0.8s linear infinite",
+                                }
+                            ),
+                            rx.text("↻", font_size="1rem"),
+                        ),
                         rx.cond(
                             ~DashboardState.sidebar_collapsed,
-                            rx.text("Refresh Now", font_size="0.85rem"),
+                            rx.text(
+                                rx.cond(
+                                    DashboardState.is_loading,
+                                    "Refreshing...",
+                                    "Refresh Data",
+                                ),
+                                font_size="0.85rem",
+                                font_weight="500",
+                            ),
                             rx.fragment(),
                         ),
                         spacing="2",
                         justify="center",
+                        align="center",
                     ),
                     style={
                         "width": "100%",
-                        "padding": "0.75rem",
-                        "margin_top": "0.75rem",
-                        "background": f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['primary_dark']})",
+                        "padding": "10px 16px",
+                        "margin_top": "8px",
+                        "background": GRADIENT_PRIMARY,
                         "border": "none",
-                        "border_radius": "12px",
+                        "border_radius": "10px",
                         "color": "white",
                         "cursor": "pointer",
-                        "font_weight": "500",
+                        "transition": "all 0.2s ease",
                         "_hover": {
                             "opacity": "0.9",
+                            "transform": "translateY(-1px)",
+                            "box_shadow": f"0 4px 16px {COLORS['primary']}40",
+                        },
+                        "_disabled": {
+                            "opacity": "0.6",
+                            "cursor": "not-allowed",
                         },
                     },
                     on_click=DashboardState.refresh_data,
+                    disabled=DashboardState.is_loading,
                 ),
+
+                # Last refresh time
+                rx.cond(
+                    ~DashboardState.sidebar_collapsed,
+                    rx.cond(
+                        DashboardState.last_refresh != "",
+                        rx.text(
+                            f"Last: {DashboardState.last_refresh}",
+                            font_size="0.7rem",
+                            color=COLORS["text_dim"],
+                            text_align="center",
+                            margin_top="6px",
+                        ),
+                        rx.fragment(),
+                    ),
+                    rx.fragment(),
+                ),
+
                 width="100%",
-                padding="1rem 0",
+                padding_top="12px",
                 border_top=f"1px solid {COLORS['border_subtle']}",
             ),
 
@@ -321,19 +481,20 @@ def sidebar() -> rx.Component:
             width="100%",
             height="100vh",
             position="relative",
+            padding="16px 12px",
         ),
 
         style={
-            "width": rx.cond(DashboardState.sidebar_collapsed, "80px", "280px"),
+            "width": rx.cond(DashboardState.sidebar_collapsed, "72px", "260px"),
             "min_height": "100vh",
-            "background": "linear-gradient(180deg, rgba(12,12,20,0.98) 0%, rgba(8,8,14,0.98) 100%)",
+            "background": "linear-gradient(180deg, rgba(10, 10, 26, 0.96) 0%, rgba(5, 5, 15, 0.98) 100%)",
             "border_right": f"1px solid {COLORS['border_subtle']}",
-            "padding": "1rem",
             "position": "fixed",
             "left": "0",
             "top": "0",
             "z_index": "100",
             "backdrop_filter": "blur(20px)",
-            "transition": "width 0.3s ease",
+            "transition": "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "overflow": "hidden",
         }
     )

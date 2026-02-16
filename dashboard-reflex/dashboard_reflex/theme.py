@@ -1,176 +1,153 @@
 """
-ClawCrew Dashboard Theme System
-Modern glassmorphism + neumorphism design tokens for 2026-style AI Dashboard.
+ClawCrew Dashboard Theme
+Modern dark theme inspired by Linear.app and Vercel Dashboard.
 """
 
 # ============================================================
 # COLOR SYSTEM
 # ============================================================
 
-# Primary palette
 COLORS = {
-    # Primary purple gradient
-    "primary": "#7B4CFF",
-    "primary_light": "#9D7AFF",
-    "primary_dark": "#5A2ED9",
-    "primary_glow": "rgba(123, 76, 255, 0.4)",
+    # Backgrounds - Rich dark navy instead of pure black
+    "bg_dark": "#0a0a1a",
+    "bg_darker": "#050510",
+    "bg_card": "rgba(15, 15, 30, 0.7)",
+    "bg_card_hover": "rgba(22, 22, 42, 0.85)",
+    "bg_elevated": "rgba(25, 25, 45, 0.95)",
+    "bg_input": "rgba(255, 255, 255, 0.04)",
+    "bg_input_focus": "rgba(255, 255, 255, 0.08)",
+    "bg_overlay": "rgba(0, 0, 0, 0.6)",
+
+    # Borders - Subtle glass-morphism borders
+    "border_subtle": "rgba(255, 255, 255, 0.06)",
+    "border_muted": "rgba(255, 255, 255, 0.1)",
+    "border_accent": "rgba(124, 58, 237, 0.3)",
+    "border_focus": "rgba(124, 58, 237, 0.5)",
+
+    # Primary Accent - Purple to Blue gradient
+    "primary": "#7c3aed",
+    "primary_light": "#8b5cf6",
+    "primary_dark": "#6d28d9",
+    "secondary": "#3b82f6",
+    "primary_glow": "rgba(124, 58, 237, 0.4)",
+
+    # Text
+    "text_primary": "#ffffff",
+    "text_secondary": "#94a3b8",
+    "text_muted": "#64748b",
+    "text_dim": "#475569",
+
+    # Status Colors
+    "status_online": "#22c55e",
+    "status_working": "#f59e0b",
+    "status_away": "#6b7280",
+    "status_error": "#ef4444",
+    "status_offline": "#374151",
+
+    # Semantic
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "error": "#ef4444",
+    "info": "#3b82f6",
 
     # Accent colors
-    "accent_cyan": "#00D9FF",
-    "accent_green": "#10B981",
-    "accent_orange": "#F97316",
-    "accent_red": "#EF4444",
-    "accent_yellow": "#FBBF24",
-
-    # Dark mode backgrounds
-    "bg_dark": "#0A0A0F",
-    "bg_card": "rgba(18, 18, 28, 0.85)",
-    "bg_card_hover": "rgba(28, 28, 42, 0.9)",
-    "bg_elevated": "rgba(30, 30, 48, 0.95)",
-    "bg_glass": "rgba(255, 255, 255, 0.03)",
-
-    # Light mode backgrounds
-    "bg_light": "#F8FAFC",
-    "bg_card_light": "rgba(255, 255, 255, 0.85)",
-    "bg_elevated_light": "rgba(255, 255, 255, 0.95)",
-
-    # Text colors
-    "text_primary": "#FFFFFF",
-    "text_secondary": "rgba(255, 255, 255, 0.7)",
-    "text_muted": "rgba(255, 255, 255, 0.4)",
-    "text_dark": "#1E293B",
-    "text_dark_secondary": "#64748B",
-
-    # Borders
-    "border_subtle": "rgba(255, 255, 255, 0.08)",
-    "border_light": "rgba(255, 255, 255, 0.12)",
-    "border_glow": "rgba(123, 76, 255, 0.3)",
-
-    # Status colors
-    "status_online": "#22C55E",
-    "status_working": "#F97316",
-    "status_away": "#FBBF24",
-    "status_offline": "#6B7280",
-    "status_error": "#EF4444",
+    "accent_cyan": "#06b6d4",
+    "accent_pink": "#ec4899",
+    "accent_orange": "#f97316",
 }
 
-# Agent-specific colors
+# Agent signature colors
 AGENT_COLORS = {
-    "Orca": "#7B4CFF",
-    "Audit": "#EF4444",
-    "Design": "#A855F7",
-    "Code": "#3B82F6",
-    "Test": "#10B981",
-    "GitHub": "#6366F1",
+    "Orca": "#7c3aed",      # Purple
+    "Design": "#ec4899",     # Pink
+    "Code": "#3b82f6",       # Blue
+    "Test": "#22c55e",       # Green
+    "GitHub": "#f97316",     # Orange
+    "Repo": "#f97316",       # Orange (alias)
+    "Audit": "#ef4444",      # Red
+    "Main": "#ef4444",       # Red (alias)
 }
 
 # ============================================================
-# GLASSMORPHISM STYLES
+# GLASSMORPHISM PRESETS
 # ============================================================
 
 GLASS_CARD = {
-    "background": "rgba(18, 18, 28, 0.75)",
-    "backdrop_filter": "blur(20px) saturate(180%)",
-    "-webkit-backdrop-filter": "blur(20px) saturate(180%)",
-    "border": "1px solid rgba(255, 255, 255, 0.08)",
-    "border_radius": "20px",
-    "box_shadow": """
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05)
-    """,
+    "background": "rgba(15, 15, 30, 0.6)",
+    "backdrop_filter": "blur(20px)",
+    "border": "1px solid rgba(255, 255, 255, 0.06)",
+    "border_radius": "16px",
 }
 
 GLASS_CARD_HOVER = {
-    **GLASS_CARD,
-    "background": "rgba(28, 28, 42, 0.85)",
-    "border": f"1px solid {COLORS['border_glow']}",
-    "box_shadow": f"""
-        0 12px 40px rgba(0, 0, 0, 0.5),
-        0 0 30px {COLORS['primary_glow']},
-        inset 0 1px 0 rgba(255, 255, 255, 0.08)
-    """,
-    "transform": "translateY(-4px) scale(1.02)",
+    "background": "rgba(22, 22, 42, 0.75)",
+    "border": "1px solid rgba(255, 255, 255, 0.1)",
+    "transform": "translateY(-4px)",
 }
 
 GLASS_PANEL = {
-    "background": "rgba(12, 12, 20, 0.9)",
-    "backdrop_filter": "blur(30px) saturate(200%)",
+    "background": "rgba(10, 10, 26, 0.85)",
+    "backdrop_filter": "blur(30px)",
     "border": "1px solid rgba(255, 255, 255, 0.06)",
-    "border_radius": "24px",
 }
 
 GLASS_INPUT = {
-    "background": "rgba(255, 255, 255, 0.05)",
-    "border": "1px solid rgba(255, 255, 255, 0.1)",
+    "background": "rgba(255, 255, 255, 0.04)",
+    "border": "1px solid rgba(255, 255, 255, 0.08)",
     "border_radius": "12px",
-    "color": COLORS["text_primary"],
-    "padding": "12px 16px",
-    "transition": "all 0.3s ease",
+    "color": "#ffffff",
+    "transition": "all 0.2s ease",
 }
 
 # ============================================================
-# NEUMORPHISM ACCENTS
+# SHADOWS & GLOWS
 # ============================================================
 
-NEUMORPHIC_BUTTON = {
-    "background": "linear-gradient(145deg, rgba(30,30,48,1), rgba(20,20,32,1))",
-    "box_shadow": """
-        6px 6px 12px rgba(0, 0, 0, 0.4),
-        -6px -6px 12px rgba(60, 60, 80, 0.1)
-    """,
-    "border": "1px solid rgba(255, 255, 255, 0.05)",
-    "border_radius": "14px",
-}
+def agent_glow(color: str, intensity: float = 0.2) -> str:
+    """Generate a subtle colored glow for agent cards."""
+    return f"0 0 30px {color}33, 0 4px 20px rgba(0, 0, 0, 0.3)"
 
-NEUMORPHIC_INSET = {
-    "background": "rgba(10, 10, 18, 0.8)",
-    "box_shadow": """
-        inset 4px 4px 8px rgba(0, 0, 0, 0.5),
-        inset -4px -4px 8px rgba(60, 60, 80, 0.05)
-    """,
-    "border_radius": "12px",
-}
+def card_shadow() -> str:
+    """Standard card shadow."""
+    return "0 4px 24px rgba(0, 0, 0, 0.25)"
+
+def elevated_shadow() -> str:
+    """Elevated element shadow."""
+    return "0 8px 32px rgba(0, 0, 0, 0.35)"
 
 # ============================================================
-# ANIMATIONS (CSS keyframes)
+# ANIMATION KEYFRAMES (CSS)
 # ============================================================
 
 ANIMATIONS_CSS = """
-/* Pulse glow for working status */
 @keyframes pulse-glow {
     0%, 100% {
-        box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
-        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 10px currentColor;
     }
     50% {
-        box-shadow: 0 0 25px rgba(249, 115, 22, 0.7);
-        transform: scale(1.1);
+        opacity: 0.6;
+        box-shadow: 0 0 20px currentColor;
     }
 }
 
-/* Subtle float animation */
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-6px); }
+@keyframes flow-dot {
+    0% {
+        transform: translateX(0);
+        opacity: 0;
+    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 }
 
-/* Gradient border animation */
-@keyframes gradient-rotate {
-    0% { --angle: 0deg; }
-    100% { --angle: 360deg; }
-}
-
-/* Shimmer loading effect */
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-/* Fade in up */
-@keyframes fadeInUp {
+@keyframes fade-in-up {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(10px);
     }
     to {
         opacity: 1;
@@ -178,40 +155,106 @@ ANIMATIONS_CSS = """
     }
 }
 
-/* Ring chart fill animation */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes status-pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+}
+
+@keyframes flow-pulse {
+    0%, 100% {
+        transform: translateX(0) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateX(10px) scale(1.2);
+        opacity: 1;
+    }
+}
+
 @keyframes ring-fill {
     from { stroke-dashoffset: 283; }
 }
 
-/* Status dot pulse */
-@keyframes status-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* Card hover glow */
-.agent-card {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.agent-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.5),
-        0 0 40px rgba(123, 76, 255, 0.3);
-}
-
-/* Skeleton loading */
+/* Utility classes */
 .skeleton {
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.03) 0%,
-        rgba(255, 255, 255, 0.08) 50%,
-        rgba(255, 255, 255, 0.03) 100%
+        rgba(255,255,255,0.03) 25%,
+        rgba(255,255,255,0.08) 50%,
+        rgba(255,255,255,0.03) 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
-    border-radius: 8px;
+}
+
+.pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.fade-in-up {
+    animation: fade-in-up 0.3s ease-out forwards;
+}
+
+.bounce-subtle {
+    animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* Agent card hover effect */
+.agent-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agent-card:hover {
+    transform: translateY(-4px) scale(1.02);
 }
 
 /* Scrollbar styling */
@@ -226,12 +269,12 @@ ANIMATIONS_CSS = """
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(123, 76, 255, 0.4);
+    background: rgba(124, 58, 237, 0.3);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(123, 76, 255, 0.6);
+    background: rgba(124, 58, 237, 0.5);
 }
 
 /* Drawer animation */
@@ -239,105 +282,211 @@ ANIMATIONS_CSS = """
     animation: slideInRight 0.3s ease-out;
 }
 
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+/* Log entry animation */
+.log-entry {
+    animation: fade-in-up 0.2s ease-out;
 }
 
-/* Ring chart */
+/* Ring chart animation */
 .ring-chart circle {
     transition: stroke-dashoffset 1s ease-out;
 }
 
-/* Stepper connector animation */
-.stepper-connector {
-    transition: background 0.5s ease;
+/* Focus ring */
+.focus-ring:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
 }
 
-/* Log entry animation */
-.log-entry {
-    animation: fadeInUp 0.3s ease-out;
+/* Gradient text */
+.gradient-text {
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 """
 
 # ============================================================
-# COMPONENT STYLE PRESETS
+# COMPONENT STYLES
 # ============================================================
 
+# Sidebar
 SIDEBAR_STYLE = {
-    "width": "280px",
-    "min_height": "100vh",
-    "background": "linear-gradient(180deg, rgba(12,12,20,0.98) 0%, rgba(8,8,14,0.98) 100%)",
-    "border_right": "1px solid rgba(255, 255, 255, 0.06)",
-    "padding": "1.5rem 1rem",
+    "background": "linear-gradient(180deg, rgba(10, 10, 26, 0.95) 0%, rgba(5, 5, 15, 0.98) 100%)",
+    "border_right": f"1px solid {COLORS['border_subtle']}",
+    "height": "100vh",
     "position": "fixed",
     "left": "0",
     "top": "0",
     "z_index": "100",
-    "backdrop_filter": "blur(20px)",
+    "display": "flex",
+    "flex_direction": "column",
+    "transition": "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    "overflow": "hidden",
 }
 
+# Navigation item styles
+NAV_ITEM_STYLE = {
+    "display": "flex",
+    "align_items": "center",
+    "gap": "12px",
+    "padding": "10px 16px",
+    "border_radius": "10px",
+    "color": COLORS["text_secondary"],
+    "cursor": "pointer",
+    "transition": "all 0.2s ease",
+    "text_decoration": "none",
+}
+
+NAV_ITEM_ACTIVE_STYLE = {
+    **NAV_ITEM_STYLE,
+    "background": f"linear-gradient(135deg, {COLORS['primary']}20, {COLORS['secondary']}15)",
+    "color": COLORS["text_primary"],
+    "border": f"1px solid {COLORS['border_accent']}",
+}
+
+# Main content area
 MAIN_CONTENT_STYLE = {
-    "margin_left": "280px",
     "min_height": "100vh",
-    "background": f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #12121C 50%, #0A0A14 100%)",
-    "padding": "2rem",
-    "width": "calc(100% - 280px)",
+    "background": f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #0f0f24 50%, {COLORS['bg_darker']} 100%)",
+    "padding": "24px",
+    "transition": "margin 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
 }
 
+# Stat card
 STAT_CARD_STYLE = {
-    **GLASS_CARD,
-    "padding": "1.25rem",
+    "background": "rgba(15, 15, 30, 0.6)",
+    "backdrop_filter": "blur(20px)",
+    "border": f"1px solid {COLORS['border_subtle']}",
+    "border_radius": "16px",
+    "padding": "20px 24px",
+    "position": "relative",
+    "overflow": "hidden",
     "min_width": "180px",
+    "transition": "all 0.2s ease",
 }
 
-BADGE_STYLE = {
-    "padding": "4px 12px",
-    "border_radius": "20px",
-    "font_size": "0.75rem",
+# Agent card
+AGENT_CARD_STYLE = {
+    "background": "rgba(15, 15, 30, 0.6)",
+    "backdrop_filter": "blur(20px)",
+    "border": f"1px solid {COLORS['border_subtle']}",
+    "border_radius": "16px",
+    "padding": "16px",
+    "cursor": "pointer",
+    "transition": "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+}
+
+# Input styles
+INPUT_STYLE = {
+    "background": COLORS["bg_input"],
+    "border": f"1px solid {COLORS['border_subtle']}",
+    "border_radius": "12px",
+    "padding": "14px 18px",
+    "color": COLORS["text_primary"],
+    "font_size": "0.95rem",
+    "outline": "none",
+    "transition": "all 0.2s ease",
+    "width": "100%",
+}
+
+# Button primary
+BUTTON_PRIMARY_STYLE = {
+    "background": f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['secondary']})",
+    "border": "none",
+    "border_radius": "12px",
+    "padding": "12px 24px",
+    "color": "white",
     "font_weight": "600",
+    "cursor": "pointer",
+    "transition": "all 0.2s ease",
+}
+
+# Button ghost
+BUTTON_GHOST_STYLE = {
+    "background": "transparent",
+    "border": f"1px solid {COLORS['border_subtle']}",
+    "border_radius": "10px",
+    "padding": "8px 16px",
+    "color": COLORS["text_secondary"],
+    "cursor": "pointer",
+    "transition": "all 0.2s ease",
+}
+
+# Badge styles
+BADGE_STYLE = {
+    "padding": "4px 10px",
+    "border_radius": "6px",
+    "font_size": "0.75rem",
+    "font_weight": "500",
     "display": "inline-flex",
     "align_items": "center",
     "gap": "6px",
 }
 
-# Status badge variants
+# Log entry
+LOG_ENTRY_STYLE = {
+    "display": "flex",
+    "align_items": "flex-start",
+    "gap": "12px",
+    "padding": "10px 12px",
+    "border_radius": "8px",
+    "transition": "background 0.15s ease",
+}
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
 def get_status_badge_style(status: str) -> dict:
     """Get status-specific badge styling."""
-    base = {**BADGE_STYLE}
-    status_styles = {
-        "online": {
-            "background": "rgba(34, 197, 94, 0.15)",
-            "color": COLORS["status_online"],
-            "border": f"1px solid {COLORS['status_online']}40",
-        },
-        "working": {
-            "background": "rgba(249, 115, 22, 0.15)",
-            "color": COLORS["status_working"],
-            "border": f"1px solid {COLORS['status_working']}40",
-            "animation": "status-pulse 1.5s infinite",
-        },
-        "away": {
-            "background": "rgba(251, 191, 36, 0.15)",
-            "color": COLORS["status_away"],
-            "border": f"1px solid {COLORS['status_away']}40",
-        },
-        "offline": {
-            "background": "rgba(107, 114, 128, 0.15)",
-            "color": COLORS["status_offline"],
-            "border": f"1px solid {COLORS['status_offline']}40",
-        },
-        "error": {
-            "background": "rgba(239, 68, 68, 0.15)",
-            "color": COLORS["status_error"],
-            "border": f"1px solid {COLORS['status_error']}40",
+    color_map = {
+        "online": COLORS["status_online"],
+        "working": COLORS["status_working"],
+        "away": COLORS["status_away"],
+        "error": COLORS["status_error"],
+        "offline": COLORS["status_offline"],
+    }
+    color = color_map.get(status, COLORS["status_offline"])
+
+    return {
+        **BADGE_STYLE,
+        "background": f"{color}15",
+        "color": color,
+        "border": f"1px solid {color}30",
+    }
+
+def get_agent_card_style(color: str) -> dict:
+    """Get agent card style with colored glow on hover."""
+    return {
+        **AGENT_CARD_STYLE,
+        "_hover": {
+            "transform": "translateY(-4px) scale(1.02)",
+            "border_color": f"{color}40",
+            "box_shadow": f"0 0 30px {color}20, 0 8px 32px rgba(0, 0, 0, 0.3)",
         },
     }
-    base.update(status_styles.get(status, status_styles["offline"]))
-    return base
+
+# ============================================================
+# GRADIENTS
+# ============================================================
+
+GRADIENT_PRIMARY = f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['secondary']})"
+GRADIENT_CARD = "linear-gradient(145deg, rgba(15, 15, 30, 0.8), rgba(10, 10, 25, 0.6))"
+GRADIENT_BG = f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #0f0f24 50%, {COLORS['bg_darker']} 100%)"
+GRADIENT_PURPLE_BLUE = f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['secondary']})"
+
+# ============================================================
+# Z-INDEX SCALE
+# ============================================================
+
+Z_INDEX = {
+    "sidebar": 100,
+    "header": 90,
+    "monitoring": 80,
+    "modal": 200,
+    "drawer": 150,
+    "tooltip": 300,
+    "notification": 400,
+}

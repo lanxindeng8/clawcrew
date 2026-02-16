@@ -1,6 +1,7 @@
 """
 Common UI Components
 Shared components: stat cards, buttons, skeletons, etc.
+Linear/Vercel-style design with trend indicators.
 """
 
 import reflex as rx
@@ -8,53 +9,173 @@ from ..theme import COLORS
 from ..state import DashboardState
 
 
-def stat_card(icon: str, label: str, value, color: str = COLORS["primary"]) -> rx.Component:
+def stat_card(
+    icon: str,
+    label: str,
+    value,
+    color: str = COLORS["primary"],
+    trend: str = "",
+    trend_up: bool = True,
+) -> rx.Component:
     """
-    Glassmorphism stat card with icon, label, and value.
+    Modern stat card with trend indicator and subtle icon background.
+    Linear/Vercel-style design.
     """
+    trend_color = COLORS["status_online"] if trend_up else COLORS["status_error"]
+    trend_icon = "↑" if trend_up else "↓"
+
     return rx.el.div(
-        rx.hstack(
-            rx.el.div(
-                rx.text(icon, font_size="1.3rem"),
-                style={
-                    "width": "44px",
-                    "height": "44px",
-                    "display": "flex",
-                    "align_items": "center",
-                    "justify_content": "center",
-                    "background": f"{color}20",
-                    "border_radius": "12px",
-                    "border": f"1px solid {color}30",
-                }
+        # Large faded icon background
+        rx.el.div(
+            icon,
+            style={
+                "position": "absolute",
+                "right": "12px",
+                "top": "50%",
+                "transform": "translateY(-50%)",
+                "font_size": "3.5rem",
+                "opacity": "0.06",
+                "pointer_events": "none",
+            }
+        ),
+
+        # Main content
+        rx.vstack(
+            # Label
+            rx.text(
+                label.upper(),
+                font_size="0.65rem",
+                font_weight="600",
+                color=COLORS["text_dim"],
+                letter_spacing="1px",
             ),
-            rx.vstack(
-                rx.text(
-                    label,
-                    font_size="0.75rem",
-                    color=COLORS["text_muted"],
-                    font_weight="500",
-                ),
+
+            # Value row with trend
+            rx.hstack(
                 rx.text(
                     value,
-                    font_size="1.4rem",
+                    font_size="1.75rem",
                     font_weight="700",
                     color=COLORS["text_primary"],
                     line_height="1",
                 ),
-                spacing="1",
+                rx.cond(
+                    trend != "",
+                    rx.el.div(
+                        rx.hstack(
+                            rx.text(trend_icon, font_size="0.65rem"),
+                            rx.text(trend, font_size="0.7rem", font_weight="600"),
+                            spacing="0",
+                            align="center",
+                        ),
+                        style={
+                            "padding": "3px 8px",
+                            "background": f"{trend_color}15",
+                            "border_radius": "6px",
+                            "color": trend_color,
+                        }
+                    ),
+                    rx.fragment(),
+                ),
+                spacing="3",
+                align="center",
+            ),
+
+            # Icon badge
+            rx.el.div(
+                rx.text(icon, font_size="1rem"),
+                style={
+                    "width": "32px",
+                    "height": "32px",
+                    "display": "flex",
+                    "align_items": "center",
+                    "justify_content": "center",
+                    "background": f"{color}15",
+                    "border_radius": "8px",
+                    "margin_top": "8px",
+                }
+            ),
+
+            spacing="1",
+            align="start",
+            width="100%",
+        ),
+
+        # Left accent bar
+        rx.el.div(
+            style={
+                "position": "absolute",
+                "left": "0",
+                "top": "12px",
+                "bottom": "12px",
+                "width": "3px",
+                "background": f"linear-gradient(180deg, {color}, {color}60)",
+                "border_radius": "0 2px 2px 0",
+            }
+        ),
+
+        style={
+            "position": "relative",
+            "background": "rgba(15, 15, 28, 0.7)",
+            "backdrop_filter": "blur(20px)",
+            "border_radius": "16px",
+            "border": f"1px solid {COLORS['border_subtle']}",
+            "padding": "1rem 1.25rem 1rem 1.5rem",
+            "min_width": "180px",
+            "flex": "1",
+            "overflow": "hidden",
+            "transition": "all 0.25s ease",
+            "_hover": {
+                "border_color": f"{color}30",
+                "transform": "translateY(-2px)",
+                "box_shadow": f"0 8px 24px {color}10",
+            },
+        }
+    )
+
+
+def stat_card_mini(icon: str, label: str, value, color: str = COLORS["primary"]) -> rx.Component:
+    """
+    Compact stat card for smaller displays.
+    """
+    return rx.el.div(
+        rx.hstack(
+            rx.el.div(
+                rx.text(icon, font_size="1rem"),
+                style={
+                    "width": "36px",
+                    "height": "36px",
+                    "display": "flex",
+                    "align_items": "center",
+                    "justify_content": "center",
+                    "background": f"{color}15",
+                    "border_radius": "10px",
+                }
+            ),
+            rx.vstack(
+                rx.text(
+                    value,
+                    font_size="1.1rem",
+                    font_weight="700",
+                    color=COLORS["text_primary"],
+                    line_height="1",
+                ),
+                rx.text(
+                    label,
+                    font_size="0.65rem",
+                    color=COLORS["text_muted"],
+                ),
+                spacing="0",
                 align="start",
             ),
             spacing="3",
             align="center",
         ),
         style={
-            "background": "rgba(18, 18, 28, 0.7)",
-            "backdrop_filter": "blur(20px)",
-            "border_radius": "16px",
+            "background": "rgba(15, 15, 28, 0.6)",
+            "border_radius": "12px",
             "border": f"1px solid {COLORS['border_subtle']}",
-            "padding": "1rem 1.25rem",
-            "min_width": "160px",
-            "box_shadow": "0 4px 20px rgba(0, 0, 0, 0.2)",
+            "padding": "0.75rem 1rem",
         }
     )
 
@@ -288,13 +409,48 @@ def section_header(title: str, icon: str = "") -> rx.Component:
 
 
 def top_stats_bar() -> rx.Component:
-    """Top statistics bar."""
-    return rx.hstack(
-        stat_card("📋", "Total Tasks", DashboardState.total_tasks, COLORS["primary"]),
-        stat_card("⚡", "Active", DashboardState.active_tasks, COLORS["status_working"]),
-        stat_card("📊", "Tokens", DashboardState.total_tokens_formatted, COLORS["accent_cyan"]),
-        stat_card("✓", "Success Rate", f"{DashboardState.success_rate}%", COLORS["status_online"]),
-        spacing="4",
-        width="100%",
-        wrap="wrap",
+    """Top statistics bar with trend indicators."""
+    return rx.el.div(
+        rx.hstack(
+            stat_card(
+                "📋",
+                "Total Tasks",
+                DashboardState.total_tasks,
+                COLORS["primary"],
+                trend="+12%",
+                trend_up=True,
+            ),
+            stat_card(
+                "⚡",
+                "Active Now",
+                DashboardState.active_tasks,
+                COLORS["status_working"],
+                trend="",
+                trend_up=True,
+            ),
+            stat_card(
+                "🔥",
+                "Tokens Used",
+                DashboardState.total_tokens_formatted,
+                COLORS["accent_cyan"],
+                trend="+8%",
+                trend_up=True,
+            ),
+            stat_card(
+                "✓",
+                "Success Rate",
+                f"{DashboardState.success_rate}%",
+                COLORS["status_online"],
+                trend="+2%",
+                trend_up=True,
+            ),
+            spacing="4",
+            width="100%",
+        ),
+        style={
+            "display": "grid",
+            "grid_template_columns": "repeat(4, 1fr)",
+            "gap": "1rem",
+            "width": "100%",
+        }
     )
