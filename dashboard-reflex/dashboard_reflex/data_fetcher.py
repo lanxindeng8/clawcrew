@@ -1,42 +1,76 @@
 """
 ClawCrew Data Fetcher
-Real-time log parsing and data aggregation from OpenClaw gateway.
+Real-time data parsing from OpenClaw session logs.
 """
 
 import os
-import re
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 
 
 # ============================================================
-# LOG PARSING PATTERNS
+# CONFIGURATION
 # ============================================================
 
-PATTERNS = {
-    # Agent status: [AGENT:orca] status=working
-    "agent_status": re.compile(r"\[AGENT:(\w+)\]\s*status=(\w+)", re.IGNORECASE),
-    # Token usage: [token:1234] or tokens:1234
-    "token": re.compile(r"\[?tokens?[:\s]+(\d+)\]?", re.IGNORECASE),
-    # Task info: [TASK:task_id] phase=design
-    "task": re.compile(r"\[TASK:([^\]]+)\]\s*phase=(\w+)", re.IGNORECASE),
-    # Log level and message
-    "log_entry": re.compile(r"(\d{2}:\d{2}:\d{2})\s*\[(\w+)\]\s*(.+)", re.IGNORECASE),
-    # Agent output
-    "agent_output": re.compile(r"\[(\w+)\]\s*(?:output|result|message):\s*(.+)", re.IGNORECASE),
-}
+# OpenClaw installation paths
+OPENCLAW_PATHS = [
+    "/Users/bot/.openclaw",  # Production deployment
+    os.path.expanduser("~/.openclaw"),  # User installation
+]
 
-# Agent name mapping
-AGENT_MAP = {
-    "orca": {"emoji": "🦑", "role": "Orchestrator", "color": "#7B4CFF"},
-    "audit": {"emoji": "🔍", "role": "Token Monitor", "color": "#EF4444"},
-    "design": {"emoji": "🎨", "role": "Architect", "color": "#A855F7"},
-    "code": {"emoji": "💻", "role": "Engineer", "color": "#3B82F6"},
-    "test": {"emoji": "🧪", "role": "QA Engineer", "color": "#10B981"},
-    "github": {"emoji": "🐙", "role": "PR Manager", "color": "#6366F1"},
+# Agent configuration - matching OpenClaw openclaw.json agents
+AGENT_CONFIG = {
+    "orca": {
+        "name": "Orca",
+        "emoji": "🦑",
+        "role": "Orchestrator",
+        "color": "#7B4CFF",
+        "model": "claude-sonnet-4-5",
+        "soul_summary": "Central orchestrator that coordinates all agent activities, dispatches tasks, and manages workflow.",
+    },
+    "design": {
+        "name": "Design",
+        "emoji": "🎨",
+        "role": "Architect",
+        "color": "#A855F7",
+        "model": "claude-opus-4-5",
+        "soul_summary": "System architect that designs solutions, APIs, and specifications.",
+    },
+    "code": {
+        "name": "Code",
+        "emoji": "💻",
+        "role": "Engineer",
+        "color": "#3B82F6",
+        "model": "claude-opus-4-5",
+        "soul_summary": "Primary code implementation agent that writes clean, maintainable code.",
+    },
+    "test": {
+        "name": "Test",
+        "emoji": "🧪",
+        "role": "QA Engineer",
+        "color": "#10B981",
+        "model": "claude-sonnet-4-5",
+        "soul_summary": "Quality assurance specialist that writes and runs comprehensive tests.",
+    },
+    "repo": {
+        "name": "Repo",
+        "emoji": "🐙",
+        "role": "PR Manager",
+        "color": "#6366F1",
+        "model": "claude-sonnet-4-5",
+        "soul_summary": "Manages GitHub operations including repository analysis and PR creation.",
+    },
+    "main": {
+        "name": "Audit",
+        "emoji": "🔍",
+        "role": "Token Monitor",
+        "color": "#EF4444",
+        "model": "claude-opus-4-6",
+        "soul_summary": "Monitors token consumption and general-purpose tasks.",
+    },
 }
 
 
@@ -45,203 +79,355 @@ AGENT_MAP = {
 # ============================================================
 
 class DataFetcher:
-    """Fetches and parses data from OpenClaw logs."""
+    """Fetches and parses data from OpenClaw session logs."""
 
-    def __init__(self, log_dir: Optional[str] = None):
-        self.log_dir = log_dir or self._find_log_dir()
-        self.last_position: Dict[str, int] = {}
+    def __init__(self, openclaw_dir: Optional[str] = None):
+        self.openclaw_dir = openclaw_dir or self._find_openclaw_dir()
         self._cache: Dict[str, Any] = {}
         self._cache_time: float = 0
         self._cache_ttl: float = 2.0  # seconds
 
-    def _find_log_dir(self) -> str:
-        """Find the OpenClaw log directory."""
-        possible_paths = [
-            os.path.expanduser("~/.openclaw/logs"),
-            os.path.expanduser("~/projects/clawcrew/logs"),
-            "/var/log/openclaw",
-            "./logs",
-        ]
-        for path in possible_paths:
-            if os.path.isdir(path):
+    def _find_openclaw_dir(self) -> str:
+        """Find the OpenClaw installation directory."""
+        for path in OPENCLAW_PATHS:
+            if os.path.isdir(path) and os.path.exists(os.path.join(path, "openclaw.json")):
                 return path
-        return "./logs"  # Default fallback
+        return OPENCLAW_PATHS[0]  # Default fallback
 
-    def _read_new_lines(self, filepath: str) -> List[str]:
-        """Read new lines from a log file since last read."""
-        if not os.path.exists(filepath):
+    def _get_session_files(self, agent_id: str) -> List[str]:
+        """Get all session files for an agent, sorted by modification time."""
+        sessions_dir = os.path.join(self.openclaw_dir, "agents", agent_id, "sessions")
+        if not os.path.isdir(sessions_dir):
             return []
 
-        last_pos = self.last_position.get(filepath, 0)
-        new_lines = []
+        files = []
+        for f in os.listdir(sessions_dir):
+            if f.endswith(".jsonl"):
+                full_path = os.path.join(sessions_dir, f)
+                files.append((full_path, os.path.getmtime(full_path)))
+
+        # Sort by modification time, newest first
+        files.sort(key=lambda x: x[1], reverse=True)
+        return [f[0] for f in files]
+
+    def _parse_session_file(self, filepath: str, max_messages: int = 50) -> Dict[str, Any]:
+        """Parse a session JSONL file and extract relevant data."""
+        result = {
+            "messages": [],
+            "total_tokens": 0,
+            "token_breakdown": {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0},
+            "cost": 0.0,
+            "model": None,
+            "last_activity": None,
+            "session_id": None,
+        }
+
+        if not os.path.exists(filepath):
+            return result
 
         try:
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                f.seek(last_pos)
-                new_lines = f.readlines()
-                self.last_position[filepath] = f.tell()
-        except Exception:
-            pass
+                lines = f.readlines()
 
-        return new_lines
+                # Parse in reverse to get most recent first
+                for line in reversed(lines):
+                    line = line.strip()
+                    if not line:
+                        continue
 
-    def _parse_log_line(self, line: str) -> Optional[Dict[str, Any]]:
-        """Parse a single log line into structured data."""
-        line = line.strip()
-        if not line:
-            return None
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
 
-        result = {"raw": line, "timestamp": datetime.now().strftime("%H:%M:%S")}
+                    entry_type = entry.get("type", "")
 
-        # Extract timestamp if present
-        log_match = PATTERNS["log_entry"].search(line)
-        if log_match:
-            result["timestamp"] = log_match.group(1)
-            result["agent"] = log_match.group(2).lower()
-            result["message"] = log_match.group(3)
+                    # Session metadata
+                    if entry_type == "session":
+                        result["session_id"] = entry.get("id", "")
 
-        # Extract agent status
-        status_match = PATTERNS["agent_status"].search(line)
-        if status_match:
-            result["agent"] = status_match.group(1).lower()
-            result["status"] = status_match.group(2).lower()
+                    # Model changes
+                    elif entry_type == "model_change":
+                        if not result["model"]:
+                            result["model"] = entry.get("modelId", "")
 
-        # Extract token count
-        token_match = PATTERNS["token"].search(line)
-        if token_match:
-            result["tokens"] = int(token_match.group(1))
+                    # Messages with usage stats
+                    elif entry_type == "message":
+                        msg = entry.get("message", {})
+                        timestamp = entry.get("timestamp", "")
 
-        # Extract task info
-        task_match = PATTERNS["task"].search(line)
-        if task_match:
-            result["task_id"] = task_match.group(1)
-            result["phase"] = task_match.group(2).lower()
+                        if len(result["messages"]) < max_messages:
+                            result["messages"].append({
+                                "role": msg.get("role", ""),
+                                "content": self._extract_text_content(msg.get("content", [])),
+                                "timestamp": timestamp,
+                            })
+
+                        # Extract token usage
+                        usage = msg.get("usage", {})
+                        if usage:
+                            result["total_tokens"] += usage.get("totalTokens", 0)
+                            result["token_breakdown"]["input"] += usage.get("input", 0)
+                            result["token_breakdown"]["output"] += usage.get("output", 0)
+                            result["token_breakdown"]["cache_read"] += usage.get("cacheRead", 0)
+                            result["token_breakdown"]["cache_write"] += usage.get("cacheWrite", 0)
+
+                            cost = usage.get("cost", {})
+                            if isinstance(cost, dict):
+                                result["cost"] += cost.get("total", 0)
+                            elif isinstance(cost, (int, float)):
+                                result["cost"] += cost
+
+                        # Track last activity
+                        if not result["last_activity"] and timestamp:
+                            result["last_activity"] = timestamp
+
+                        # Update model from message
+                        if not result["model"]:
+                            result["model"] = msg.get("model", "")
+
+        except Exception as e:
+            print(f"Error parsing session file {filepath}: {e}")
 
         return result
 
+    def _extract_text_content(self, content: Any) -> str:
+        """Extract text content from message content array."""
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            texts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        texts.append(item.get("text", ""))
+                elif isinstance(item, str):
+                    texts.append(item)
+            return " ".join(texts)
+
+        return str(content) if content else ""
+
+    def _determine_agent_status(self, last_activity: Optional[str]) -> str:
+        """Determine agent status based on last activity timestamp."""
+        if not last_activity:
+            return "offline"
+
+        try:
+            # Parse ISO timestamp
+            if last_activity.endswith("Z"):
+                last_time = datetime.fromisoformat(last_activity.replace("Z", "+00:00"))
+            else:
+                last_time = datetime.fromisoformat(last_activity)
+
+            now = datetime.now(last_time.tzinfo) if last_time.tzinfo else datetime.now()
+            delta = now - last_time.replace(tzinfo=None) if not last_time.tzinfo else now - last_time
+
+            # Status based on recency
+            if delta < timedelta(minutes=2):
+                return "working"
+            elif delta < timedelta(minutes=30):
+                return "online"
+            elif delta < timedelta(hours=24):
+                return "away"
+            else:
+                return "offline"
+
+        except Exception:
+            return "online"  # Default if parsing fails
+
     def get_agent_data(self) -> List[Dict[str, Any]]:
-        """Get current agent statuses and metrics."""
+        """Get current agent statuses and metrics from session logs."""
         agents = []
 
-        for agent_id, info in AGENT_MAP.items():
+        for agent_id, config in AGENT_CONFIG.items():
             agent_data = {
                 "id": agent_id,
-                "name": agent_id.title(),
-                "emoji": info["emoji"],
-                "role": info["role"],
-                "color": info["color"],
-                "status": "online",  # Default
+                "name": config["name"],
+                "emoji": config["emoji"],
+                "role": config["role"],
+                "color": config["color"],
+                "model": config["model"],
+                "soul_summary": config["soul_summary"],
+                "status": "offline",
                 "tokens": 0,
                 "tasks_completed": 0,
                 "current_task": "",
-                "model": "claude-3-sonnet",
-                "soul_summary": f"AI agent specialized in {info['role'].lower()} tasks.",
                 "recent_outputs": [],
-                "token_history": [0] * 10,
+                "token_history": [],
             }
 
-            # Try to get real data from logs
-            log_file = os.path.join(self.log_dir, f"{agent_id}.log")
-            if os.path.exists(log_file):
-                try:
-                    with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                        lines = f.readlines()[-50:]  # Last 50 lines
-                        for line in lines:
-                            parsed = self._parse_log_line(line)
-                            if parsed:
-                                if "status" in parsed:
-                                    agent_data["status"] = parsed["status"]
-                                if "tokens" in parsed:
-                                    agent_data["tokens"] += parsed["tokens"]
-                except Exception:
-                    pass
+            # Get session files for this agent
+            session_files = self._get_session_files(agent_id)
+
+            if session_files:
+                # Parse most recent session
+                latest_session = self._parse_session_file(session_files[0], max_messages=20)
+
+                agent_data["tokens"] = latest_session["total_tokens"]
+                agent_data["status"] = self._determine_agent_status(latest_session["last_activity"])
+
+                if latest_session["model"]:
+                    agent_data["model"] = latest_session["model"]
+
+                # Extract recent outputs (assistant messages)
+                for msg in latest_session["messages"]:
+                    if msg["role"] == "assistant" and msg["content"]:
+                        # Truncate long outputs
+                        text = msg["content"][:100]
+                        if len(msg["content"]) > 100:
+                            text += "..."
+                        # Skip NO_REPLY messages
+                        if text.strip() not in ["NO_REPLY", "HEARTBEAT_OK"]:
+                            agent_data["recent_outputs"].append(text)
+                        if len(agent_data["recent_outputs"]) >= 5:
+                            break
+
+                # Extract current task from recent user message
+                for msg in latest_session["messages"]:
+                    if msg["role"] == "user" and msg["content"]:
+                        text = msg["content"]
+                        # Extract task description (skip Telegram headers)
+                        if "]:" in text:
+                            text = text.split("]:")[-1].strip()
+                        agent_data["current_task"] = text[:80]
+                        if len(text) > 80:
+                            agent_data["current_task"] += "..."
+                        break
+
+                # Build token history from multiple sessions (normalized for display)
+                token_history = []
+                for sf in session_files[:10]:  # Last 10 sessions
+                    session_data = self._parse_session_file(sf, max_messages=5)
+                    # Normalize large token counts for chart display
+                    tokens = session_data["total_tokens"]
+                    if tokens > 100000:
+                        tokens = tokens // 1000  # Convert to K for display
+                    token_history.append(min(tokens, 10000))  # Cap at 10K for chart
+
+                agent_data["token_history"] = list(reversed(token_history))
+                agent_data["tasks_completed"] = len(session_files)
+
+                # For display, show tokens from most recent session only (in K)
+                if agent_data["tokens"] > 1000:
+                    agent_data["tokens"] = agent_data["tokens"] // 1000 * 1000  # Round to nearest K
 
             agents.append(agent_data)
 
         return agents
 
     def get_logs(self, limit: int = 100) -> List[Dict[str, str]]:
-        """Get recent log entries."""
+        """Get recent log entries from all agent sessions."""
         logs = []
 
-        # Try to read from main gateway log
-        gateway_log = os.path.join(self.log_dir, "gateway.log")
-        if os.path.exists(gateway_log):
-            try:
-                with open(gateway_log, 'r', encoding='utf-8', errors='ignore') as f:
-                    lines = f.readlines()[-limit:]
-                    for line in lines:
-                        parsed = self._parse_log_line(line)
-                        if parsed and "message" in parsed:
-                            logs.append({
-                                "id": str(len(logs)),
-                                "timestamp": parsed.get("timestamp", ""),
-                                "agent": parsed.get("agent", "system"),
-                                "message": parsed.get("message", line.strip()),
-                                "level": "info",
-                            })
-            except Exception:
-                pass
+        for agent_id in AGENT_CONFIG.keys():
+            session_files = self._get_session_files(agent_id)
 
-        # Return mock data if no real logs
-        if not logs:
-            logs = self._get_mock_logs()
+            for sf in session_files[:3]:  # Last 3 sessions per agent
+                session_data = self._parse_session_file(sf, max_messages=20)
 
-        return logs[-limit:]
+                for msg in session_data["messages"]:
+                    if msg["content"]:
+                        # Parse timestamp
+                        timestamp = msg["timestamp"]
+                        try:
+                            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                            time_str = dt.strftime("%H:%M:%S")
+                        except Exception:
+                            time_str = timestamp[:8] if len(timestamp) >= 8 else timestamp
+
+                        # Determine log level
+                        level = "info"
+                        content = msg["content"].lower()
+                        if "error" in content or "failed" in content:
+                            level = "error"
+                        elif "success" in content or "completed" in content or "✓" in content:
+                            level = "success"
+                        elif "warning" in content or "caution" in content:
+                            level = "warning"
+
+                        logs.append({
+                            "id": f"{agent_id}-{len(logs)}",
+                            "timestamp": time_str,
+                            "agent": agent_id,
+                            "message": msg["content"][:200],
+                            "level": level,
+                            "role": msg["role"],
+                        })
+
+        # Sort by timestamp (most recent first) and limit
+        logs.sort(key=lambda x: x["timestamp"], reverse=True)
+        return logs[:limit]
 
     def get_token_stats(self) -> Dict[str, Any]:
-        """Get token usage statistics."""
+        """Get token usage statistics across all agents (most recent session only)."""
         total = 0
         by_agent = {}
 
-        for agent_id in AGENT_MAP.keys():
+        for agent_id, config in AGENT_CONFIG.items():
             agent_tokens = 0
-            log_file = os.path.join(self.log_dir, f"{agent_id}.log")
-            if os.path.exists(log_file):
-                try:
-                    with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                        for line in f:
-                            match = PATTERNS["token"].search(line)
-                            if match:
-                                agent_tokens += int(match.group(1))
-                except Exception:
-                    pass
+            session_files = self._get_session_files(agent_id)
 
-            by_agent[agent_id.title()] = agent_tokens
+            # Only count the most recent session for clearer metrics
+            if session_files:
+                session_data = self._parse_session_file(session_files[0], max_messages=100)
+                agent_tokens = session_data["total_tokens"]
+
+            by_agent[config["name"]] = agent_tokens
             total += agent_tokens
 
-        # Use mock data if no real tokens found
-        if total == 0:
-            return self._get_mock_token_stats()
+        budget = 100000  # Default budget
 
         return {
             "total": total,
             "by_agent": by_agent,
-            "budget": 100000,
-            "budget_used_percent": min(100, (total / 100000) * 100),
+            "budget": budget,
+            "budget_used_percent": min(100, (total / budget) * 100) if budget > 0 else 0,
         }
 
     def get_task_status(self) -> Dict[str, Any]:
         """Get current task pipeline status."""
-        # Try to read from task log
-        task_log = os.path.join(self.log_dir, "tasks.log")
-        if os.path.exists(task_log):
-            try:
-                with open(task_log, 'r', encoding='utf-8', errors='ignore') as f:
-                    lines = f.readlines()
-                    # Parse last task info
-                    for line in reversed(lines):
-                        parsed = self._parse_log_line(line)
-                        if parsed and "task_id" in parsed:
-                            return {
-                                "id": parsed["task_id"],
-                                "phase": parsed.get("phase", "unknown"),
-                                "progress": self._phase_to_progress(parsed.get("phase", "")),
-                            }
-            except Exception:
-                pass
+        # Find most recent active task from orca (orchestrator)
+        orca_sessions = self._get_session_files("orca")
 
-        # Return mock data
+        if orca_sessions:
+            session_data = self._parse_session_file(orca_sessions[0], max_messages=30)
+
+            # Try to determine current phase from messages
+            current_phase = "orchestrate"
+            for msg in session_data["messages"]:
+                content = msg["content"].lower()
+                if "designbot" in content or "design" in content:
+                    current_phase = "design"
+                elif "codebot" in content or "code" in content or "implement" in content:
+                    current_phase = "code"
+                elif "testbot" in content or "test" in content:
+                    current_phase = "test"
+                elif "deploy" in content or "github" in content or "pr" in content:
+                    current_phase = "deploy"
+                    break
+
+            # Extract task name from first user message
+            task_name = "Unknown task"
+            for msg in reversed(session_data["messages"]):
+                if msg["role"] == "user" and msg["content"]:
+                    text = msg["content"]
+                    if "]:" in text:
+                        text = text.split("]:")[-1].strip()
+                    task_name = text[:60]
+                    if len(text) > 60:
+                        task_name += "..."
+                    break
+
+            return {
+                "id": session_data["session_id"] or datetime.now().strftime("%Y%m%d-%H%M%S"),
+                "name": task_name,
+                "phase": current_phase,
+                "progress": self._phase_to_progress(current_phase),
+                "steps": self._build_task_steps(current_phase, session_data["total_tokens"]),
+            }
+
+        # Fallback mock data
         return self._get_mock_task_status()
 
     def _phase_to_progress(self, phase: str) -> int:
@@ -255,48 +441,60 @@ class DataFetcher:
         }
         return phases.get(phase.lower(), 0)
 
-    def _get_mock_logs(self) -> List[Dict[str, str]]:
-        """Return mock log data when real logs unavailable."""
-        return [
-            {"id": "1", "timestamp": "15:33:10", "agent": "code", "message": "Adding type hints and docstrings", "level": "info"},
-            {"id": "2", "timestamp": "15:32:45", "agent": "code", "message": "Implementing email validation with regex", "level": "info"},
-            {"id": "3", "timestamp": "15:32:18", "agent": "orca", "message": "Quality gate passed → Calling CodeBot", "level": "success"},
-            {"id": "4", "timestamp": "15:32:15", "agent": "design", "message": "Output saved to artifacts/design.md", "level": "info"},
-            {"id": "5", "timestamp": "15:31:02", "agent": "design", "message": "Analyzing requirements...", "level": "info"},
-            {"id": "6", "timestamp": "15:30:45", "agent": "orca", "message": "Calling DesignBot...", "level": "info"},
-            {"id": "7", "timestamp": "15:30:42", "agent": "orca", "message": "Received task: Create email validation", "level": "info"},
-            {"id": "8", "timestamp": "15:30:00", "agent": "audit", "message": "Token budget check: OK", "level": "success"},
-        ]
+    def _build_task_steps(self, current_phase: str, total_tokens: int) -> List[Dict[str, Any]]:
+        """Build task steps based on current phase."""
+        phases = ["orchestrate", "design", "code", "test", "deploy"]
+        current_idx = phases.index(current_phase) if current_phase in phases else 0
 
-    def _get_mock_token_stats(self) -> Dict[str, Any]:
-        """Return mock token statistics."""
-        return {
-            "total": 18420,
-            "by_agent": {
-                "Orca": 4200,
-                "Audit": 980,
-                "Design": 3800,
-                "Code": 5120,
-                "Test": 2300,
-                "GitHub": 2020,
-            },
-            "budget": 100000,
-            "budget_used_percent": 18.4,
+        steps = []
+        agent_map = {
+            "orchestrate": ("Orca", "🦑"),
+            "design": ("Design", "🎨"),
+            "code": ("Code", "💻"),
+            "test": ("Test", "🧪"),
+            "deploy": ("GitHub", "🐙"),
         }
 
+        for i, phase in enumerate(phases):
+            agent_name, emoji = agent_map.get(phase, ("Unknown", "❓"))
+
+            if i < current_idx:
+                status = "completed"
+                duration = f"{0.5 + i * 0.8:.1f}s"
+                tokens = int(total_tokens * 0.15)
+            elif i == current_idx:
+                status = "active"
+                duration = "--"
+                tokens = int(total_tokens * 0.4)
+            else:
+                status = "pending"
+                duration = "--"
+                tokens = 0
+
+            steps.append({
+                "name": phase.title(),
+                "agent": agent_name,
+                "emoji": emoji,
+                "status": status,
+                "duration": duration,
+                "tokens": tokens,
+            })
+
+        return steps
+
     def _get_mock_task_status(self) -> Dict[str, Any]:
-        """Return mock task status."""
+        """Return mock task status when no real data available."""
         return {
-            "id": "20240214-153042",
-            "name": "Create email validation function",
-            "phase": "code",
-            "progress": 60,
+            "id": datetime.now().strftime("%Y%m%d-%H%M%S"),
+            "name": "No active task",
+            "phase": "orchestrate",
+            "progress": 0,
             "steps": [
-                {"name": "Orchestrate", "status": "completed", "duration": "0.8s", "tokens": 320},
-                {"name": "Design", "status": "completed", "duration": "2.4s", "tokens": 850},
-                {"name": "Code", "status": "active", "duration": "--", "tokens": 1240},
-                {"name": "Test", "status": "pending", "duration": "--", "tokens": 0},
-                {"name": "Deploy", "status": "pending", "duration": "--", "tokens": 0},
+                {"name": "Orchestrate", "agent": "Orca", "emoji": "🦑", "status": "pending", "duration": "--", "tokens": 0},
+                {"name": "Design", "agent": "Design", "emoji": "🎨", "status": "pending", "duration": "--", "tokens": 0},
+                {"name": "Code", "agent": "Code", "emoji": "💻", "status": "pending", "duration": "--", "tokens": 0},
+                {"name": "Test", "agent": "Test", "emoji": "🧪", "status": "pending", "duration": "--", "tokens": 0},
+                {"name": "Deploy", "agent": "GitHub", "emoji": "🐙", "status": "pending", "duration": "--", "tokens": 0},
             ],
         }
 
@@ -315,6 +513,7 @@ class DataFetcher:
             "tokens": self.get_token_stats(),
             "task": self.get_task_status(),
             "last_update": datetime.now().strftime("%H:%M:%S"),
+            "data_source": "openclaw" if os.path.exists(self.openclaw_dir) else "mock",
         }
 
         self._cache = data

@@ -202,8 +202,10 @@ class DashboardState(rx.State):
 
     @rx.var
     def total_tokens_formatted(self) -> str:
-        """Format total tokens with K suffix."""
-        if self.total_tokens >= 1000:
+        """Format total tokens with K/M suffix."""
+        if self.total_tokens >= 1000000:
+            return f"{self.total_tokens / 1000000:.1f}M"
+        elif self.total_tokens >= 1000:
             return f"{self.total_tokens / 1000:.1f}K"
         return str(self.total_tokens)
 
@@ -307,12 +309,76 @@ class DashboardState(rx.State):
         self.auto_refresh = not self.auto_refresh
 
     async def refresh_data(self):
+        """Refresh dashboard data from OpenClaw session logs."""
         self.is_loading = True
         try:
             data = await data_fetcher.fetch_all()
+
+            # Update token stats
             if data.get("tokens"):
                 self.total_tokens = data["tokens"].get("total", self.total_tokens)
+
+            # Update agents from real data
+            if data.get("agents"):
+                new_agents = []
+                for agent_data in data["agents"]:
+                    new_agents.append(Agent(
+                        id=agent_data.get("id", ""),
+                        name=agent_data.get("name", ""),
+                        emoji=agent_data.get("emoji", "🤖"),
+                        role=agent_data.get("role", ""),
+                        status=agent_data.get("status", "offline"),
+                        model=agent_data.get("model", "claude-3-sonnet"),
+                        tokens=agent_data.get("tokens", 0),
+                        tasks_completed=agent_data.get("tasks_completed", 0),
+                        current_task=agent_data.get("current_task", ""),
+                        color=agent_data.get("color", "#7B4CFF"),
+                        soul_summary=agent_data.get("soul_summary", ""),
+                        recent_outputs=agent_data.get("recent_outputs", []),
+                        token_history=agent_data.get("token_history", []),
+                    ))
+                if new_agents:
+                    self.agents = new_agents
+
+            # Update logs
+            if data.get("logs"):
+                new_logs = []
+                for log_data in data["logs"][:50]:  # Limit to 50 most recent
+                    new_logs.append(LogEntry(
+                        id=log_data.get("id", ""),
+                        timestamp=log_data.get("timestamp", ""),
+                        agent=log_data.get("agent", ""),
+                        message=log_data.get("message", ""),
+                        level=log_data.get("level", "info"),
+                    ))
+                if new_logs:
+                    self.logs = new_logs
+
+            # Update task info
+            if data.get("task"):
+                task = data["task"]
+                self.current_task_name = task.get("name", self.current_task_name)
+                self.current_task_id = task.get("id", self.current_task_id)
+
+                # Update task steps
+                if task.get("steps"):
+                    new_steps = []
+                    for step in task["steps"]:
+                        new_steps.append(TaskStep(
+                            name=step.get("name", ""),
+                            agent=step.get("agent", ""),
+                            emoji=step.get("emoji", ""),
+                            status=step.get("status", "pending"),
+                            duration=step.get("duration", "--"),
+                            tokens_used=step.get("tokens", 0),
+                        ))
+                    if new_steps:
+                        self.task_steps = new_steps
+
+            # Update metadata
             self.last_refresh = datetime.now().strftime("%H:%M:%S")
+            self.data_source = data.get("data_source", "mock")
+
         except Exception as e:
             print(f"Error refreshing data: {e}")
         self.is_loading = False
