@@ -137,7 +137,7 @@ def agent_card(agent) -> rx.Component:
                             font_weight="600",
                             color=rx.cond(
                                 DashboardState.dark_mode,
-                                COLORS["text_secondary"],
+                                "#e2e8f0",  # Brighter for dark mode
                                 "#475569",
                             ),
                         ),
@@ -153,7 +153,7 @@ def agent_card(agent) -> rx.Component:
                             font_weight="600",
                             color=rx.cond(
                                 DashboardState.dark_mode,
-                                COLORS["text_secondary"],
+                                "#e2e8f0",  # Brighter for dark mode
                                 "#475569",
                             ),
                         ),
@@ -167,7 +167,7 @@ def agent_card(agent) -> rx.Component:
                             font_size="0.65rem",
                             color=rx.cond(
                                 DashboardState.dark_mode,
-                                COLORS["text_dim"],
+                                "#94a3b8",  # Brighter for dark mode
                                 "#64748b",
                             ),
                         ),
@@ -175,7 +175,7 @@ def agent_card(agent) -> rx.Component:
                             "padding": "2px 8px",
                             "background": rx.cond(
                                 DashboardState.dark_mode,
-                                "rgba(255,255,255,0.05)",
+                                "rgba(255,255,255,0.1)",  # Slightly more visible
                                 "rgba(0,0,0,0.05)",
                             ),
                             "border_radius": "6px",
@@ -354,7 +354,7 @@ def agent_card_compact(agent) -> rx.Component:
                         font_size="0.6rem",
                         color=rx.cond(
                             DashboardState.dark_mode,
-                            COLORS["text_dim"],
+                            "#94a3b8",  # Brighter for dark mode
                             "#64748b",
                         ),
                     ),
@@ -388,7 +388,7 @@ def agent_card_compact(agent) -> rx.Component:
                         font_size="0.6rem",
                         color=rx.cond(
                             DashboardState.dark_mode,
-                            COLORS["text_dim"],
+                            "#94a3b8",  # Brighter for dark mode
                             "#64748b",
                         ),
                     ),

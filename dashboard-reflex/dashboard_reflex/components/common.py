@@ -48,7 +48,7 @@ def stat_card(
                 font_weight="600",
                 color=rx.cond(
                     DashboardState.dark_mode,
-                    COLORS["text_dim"],
+                    "#94a3b8",  # Brighter for dark mode contrast
                     "#64748b",
                 ),
                 letter_spacing="1px",

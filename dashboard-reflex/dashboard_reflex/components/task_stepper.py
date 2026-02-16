@@ -330,7 +330,7 @@ def task_stepper() -> rx.Component:
                             font_size="0.7rem",
                             color=rx.cond(
                                 DashboardState.dark_mode,
-                                COLORS["text_dim"],
+                                "#94a3b8",  # Brighter for dark mode
                                 "#64748b",
                             ),
                         ),
@@ -351,7 +351,7 @@ def task_stepper() -> rx.Component:
                             font_size="0.7rem",
                             color=rx.cond(
                                 DashboardState.dark_mode,
-                                COLORS["text_dim"],
+                                "#94a3b8",  # Brighter for dark mode
                                 "#64748b",
                             ),
                         ),

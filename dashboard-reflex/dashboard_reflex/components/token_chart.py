@@ -292,7 +292,7 @@ def token_trend_chart() -> rx.Component:
         # Current session stats
         rx.hstack(
             rx.el.div(
-                rx.text("This Task", font_size="0.7rem", color=COLORS["text_muted"]),
+                rx.text("This Task", font_size="0.7rem", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b")),
                 rx.text(
                     "+2,410",
                     font_size="1rem",
@@ -313,7 +313,7 @@ def token_trend_chart() -> rx.Component:
                 }
             ),
             rx.el.div(
-                rx.text("Avg/Task", font_size="0.7rem", color=COLORS["text_muted"]),
+                rx.text("Avg/Task", font_size="0.7rem", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b")),
                 rx.text(
                     "1,847",
                     font_size="1rem",
@@ -338,7 +338,7 @@ def token_trend_chart() -> rx.Component:
                 }
             ),
             rx.el.div(
-                rx.text("Budget Left", font_size="0.7rem", color=COLORS["text_muted"]),
+                rx.text("Budget Left", font_size="0.7rem", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b")),
                 rx.text(
                     "81.6K",
                     font_size="1rem",

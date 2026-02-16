@@ -301,13 +301,13 @@ def virtual_office() -> rx.Component:
         rx.el.div(
             rx.hstack(
                 rx.el.span("🦑 Orca", style={"background": f"{AGENT_COLORS['Orca']}20", "color": AGENT_COLORS["Orca"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Orca']}40"}),
-                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.text("→", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b"), font_size="0.9rem"),
                 rx.el.span("🎨 Design", style={"background": f"{AGENT_COLORS['Design']}20", "color": AGENT_COLORS["Design"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Design']}40"}),
-                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.text("→", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b"), font_size="0.9rem"),
                 rx.el.span("💻 Code", style={"background": f"{AGENT_COLORS['Code']}20", "color": AGENT_COLORS["Code"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Code']}40"}),
-                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.text("→", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b"), font_size="0.9rem"),
                 rx.el.span("🧪 Test", style={"background": f"{AGENT_COLORS['Test']}20", "color": AGENT_COLORS["Test"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['Test']}40"}),
-                rx.text("→", color=COLORS["text_dim"], font_size="0.9rem"),
+                rx.text("→", color=rx.cond(DashboardState.dark_mode, "#94a3b8", "#64748b"), font_size="0.9rem"),
                 rx.el.span("🐙 GitHub", style={"background": f"{AGENT_COLORS['GitHub']}20", "color": AGENT_COLORS["GitHub"], "padding": "5px 12px", "border_radius": "10px", "font_weight": "600", "font_size": "0.75rem", "border": f"1px solid {AGENT_COLORS['GitHub']}40"}),
                 spacing="2",
                 wrap="wrap",
