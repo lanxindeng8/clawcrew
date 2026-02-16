@@ -232,27 +232,41 @@ def nav_button(icon: str, label: str, page: str, is_active) -> rx.Component:
 # AGENT CARD: Virtual Office workstation card
 # ============================================================
 
-def agent_card(agent: Dict[str, Any]) -> rx.Component:
-    """Render an agent workstation card with absolute positioning."""
-    status = agent.get("status", "offline")
-    color = agent.get("color", COLORS["accent_indigo"])
-    is_lead = agent.get("name", "").lower() == "orca"
-    position = agent.get("position", {"top": "50%", "left": "50%"})
+def agent_card(agent) -> rx.Component:
+    """Render an agent workstation card with absolute positioning.
 
-    status_labels = {
-        "online": "Online",
-        "working": "Working",
-        "away": "Away",
-        "offline": "Offline",
-        "error": "Error",
-    }
-    status_icons = {
-        "online": "🟢",
-        "working": "🟠",
-        "away": "🟡",
-        "offline": "⚪",
-        "error": "🔴",
-    }
+    Note: agent is a Var when used inside rx.foreach, so we must use
+    rx.match/rx.cond instead of Python dict operations.
+    """
+    # Use rx.match for status-based color
+    status_color = rx.match(
+        agent["status"],
+        ("online", STATUS_COLORS["online"]),
+        ("working", STATUS_COLORS["working"]),
+        ("away", STATUS_COLORS["away"]),
+        ("error", STATUS_COLORS["error"]),
+        STATUS_COLORS["offline"],
+    )
+
+    # Status icon via rx.match
+    status_icon = rx.match(
+        agent["status"],
+        ("online", "🟢"),
+        ("working", "🟠"),
+        ("away", "🟡"),
+        ("error", "🔴"),
+        "⚪",
+    )
+
+    # Status label via rx.match
+    status_label = rx.match(
+        agent["status"],
+        ("online", "Online"),
+        ("working", "Working"),
+        ("away", "Away"),
+        ("error", "Error"),
+        "Offline",
+    )
 
     return rx.el.div(
         # Desktop icon (top-right)
@@ -271,7 +285,7 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
         ),
         # Lead badge (if Orca)
         rx.cond(
-            is_lead,
+            agent["name"] == "Orca",
             rx.el.div(
                 "👑 LEAD",
                 style={
@@ -297,13 +311,12 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
                 "width": "14px",
                 "height": "14px",
                 "border_radius": "50%",
-                "background": STATUS_COLORS.get(status, "#94a3b8"),
-                "box_shadow": f"0 0 12px {STATUS_COLORS.get(status, '#94a3b8')}80",
+                "background": status_color,
             }
         ),
         # Avatar
         rx.el.div(
-            agent.get("emoji", "🤖"),
+            agent["emoji"],
             style={
                 "width": "70px",
                 "height": "70px",
@@ -314,13 +327,13 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
                 "align_items": "center",
                 "justify_content": "center",
                 "font_size": "2.2rem",
-                "border": f"3px solid {color}",
+                "border": "3px solid " + COLORS["accent_indigo"],
                 "box_shadow": "0 4px 15px rgba(0,0,0,0.1)",
             }
         ),
         # Name
         rx.el.h4(
-            agent.get("name", "Agent"),
+            agent["name"],
             style={
                 "text_align": "center",
                 "margin": "0.4rem 0 0.2rem",
@@ -330,7 +343,7 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
         ),
         # Role
         rx.el.p(
-            agent.get("role", ""),
+            agent["role"],
             style={
                 "text_align": "center",
                 "color": COLORS["text_secondary"],
@@ -341,19 +354,19 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
         # Status badge
         rx.el.div(
             rx.hstack(
-                rx.text(status_icons.get(status, "⚪")),
-                rx.text(status_labels.get(status, status.title())),
+                rx.text(status_icon),
+                rx.text(status_label),
                 spacing="1",
             ),
             style={
                 "text_align": "center",
                 "margin": "0.5rem auto",
                 "padding": "4px 12px",
-                "background": f"{STATUS_COLORS.get(status, '#94a3b8')}20",
                 "border_radius": "15px",
                 "font_size": "0.75rem",
                 "font_weight": "600",
                 "width": "fit-content",
+                "background": "#f1f5f9",
             }
         ),
         # Stats
@@ -361,13 +374,13 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
             rx.vstack(
                 rx.hstack(
                     rx.text("📊 Tokens", color=COLORS["text_secondary"], font_size="0.7rem"),
-                    rx.text(f"{agent.get('tokens', 0):,}", font_weight="600", font_size="0.7rem"),
+                    rx.text(agent["tokens"], font_weight="600", font_size="0.7rem"),
                     justify="between",
                     width="100%",
                 ),
                 rx.hstack(
                     rx.text("📋 Tasks", color=COLORS["text_secondary"], font_size="0.7rem"),
-                    rx.text(str(agent.get("tasks", 0)), font_weight="600", font_size="0.7rem"),
+                    rx.text(agent["tasks"], font_weight="600", font_size="0.7rem"),
                     justify="between",
                     width="100%",
                 ),
@@ -383,16 +396,16 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
         ),
         # Current task (if any)
         rx.cond(
-            agent.get("current_task", "") != "",
+            agent["current_task"] != "",
             rx.el.div(
-                f"💬 {agent.get('current_task', '')[:30]}...",
+                rx.text("💬 ", agent["current_task"]),
                 style={
-                    "background": f"{color}10",
+                    "background": "#f0f9ff",
                     "border_radius": "8px",
                     "padding": "6px 10px",
                     "margin_top": "8px",
                     "font_size": "0.7rem",
-                    "border_left": f"3px solid {color}",
+                    "border_left": "3px solid " + COLORS["accent_indigo"],
                     "color": COLORS["text_secondary"],
                 }
             ),
@@ -401,21 +414,17 @@ def agent_card(agent: Dict[str, Any]) -> rx.Component:
         # Card container styles
         style={
             "position": "absolute",
-            "top": position.get("top", "50%"),
-            "left": position.get("left", "50%"),
+            "top": agent["position"]["top"],
+            "left": agent["position"]["left"],
             "width": "200px",
             "background": "rgba(255,255,255,0.95)",
             "backdrop_filter": "blur(10px)",
             "border_radius": "16px",
             "padding": "1rem",
-            "border": f"2px solid {color}40",
+            "border": "2px solid " + COLORS["accent_indigo"] + "40",
             "box_shadow": "0 8px 30px rgba(0,0,0,0.12)",
             "transition": "all 0.3s ease",
             "z_index": "10",
-            "_hover": {
-                "transform": "translateY(-5px) scale(1.02)",
-                "box_shadow": "0 15px 40px rgba(0,0,0,0.15)",
-            }
         }
     )
 
