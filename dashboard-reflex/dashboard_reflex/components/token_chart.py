@@ -294,7 +294,7 @@ def token_trend_chart() -> rx.Component:
                 ),
                 text_align="center",
             ),
-            justify="around",
+            justify="between",
             width="100%",
             margin_top="1rem",
             padding_top="1rem",
