@@ -271,7 +271,11 @@ def virtual_office() -> rx.Component:
             ),
             style={
                 "padding": "1rem",
-                "background": "rgba(255, 255, 255, 0.02)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.02)",
+                    "rgba(0, 0, 0, 0.02)",
+                ),
                 "border_radius": "14px",
                 "margin_bottom": "1.5rem",
             }
@@ -359,10 +363,18 @@ def virtual_office() -> rx.Component:
         # Container styles
         style={
             "width": "100%",
-            "background": "rgba(15, 15, 28, 0.7)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 28, 0.7)",
+                "rgba(255, 255, 255, 0.6)",
+            ),
             "backdrop_filter": "blur(24px)",
             "border_radius": "24px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.06)",
+            ),
             "padding": "1.5rem",
         }
     )

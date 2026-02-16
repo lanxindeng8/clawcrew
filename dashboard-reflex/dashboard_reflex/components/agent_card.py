@@ -230,7 +230,7 @@ def agent_card(agent) -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(15, 15, 30, 0.6)",
-                "rgba(255, 255, 255, 0.9)",
+                "rgba(255, 255, 255, 0.95)",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "16px",
@@ -243,6 +243,8 @@ def agent_card(agent) -> rx.Component:
             "transition": "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             "width": "100%",
             "min_width": "280px",
+            "min_height": "120px",
+            "box_sizing": "border-box",
             "_hover": {
                 "transform": "translateY(-4px)",
                 "border_color": f"{agent_color}40",
