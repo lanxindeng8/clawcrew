@@ -1,0 +1,53 @@
+# ClawCrew Docker Compose
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Run: docker-compose up -d
+#   3. Check logs: docker-compose logs -f
+#
+version: '3.8'
+
+services:
+  clawcrew:
+    build: .
+    image: clawcrew/clawcrew:latest
+    container_name: clawcrew
+    restart: unless-stopped
+
+    environment:
+      # Telegram Configuration (Required)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+
+      # GitHub Configuration (Optional)
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+
+      # Dashboard (Optional)
+      - ENABLE_DASHBOARD=${ENABLE_DASHBOARD:-false}
+
+    volumes:
+      # Persist OpenClaw configuration and data
+      - ${OPENCLAW_DIR:-~/.openclaw}:/root/.openclaw
+
+      # Persist ClawCrew configuration
+      - clawcrew-config:/root/.clawcrew
+
+      # Persist artifacts
+      - clawcrew-artifacts:/app/artifacts
+
+    ports:
+      # Dashboard ports (if enabled)
+      - "${DASHBOARD_API_PORT:-6000}:6000"
+      - "${DASHBOARD_UI_PORT:-6001}:6001"
+
+    healthcheck:
+      test: ["CMD", "clawcrew", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  clawcrew-config:
+  clawcrew-artifacts:
