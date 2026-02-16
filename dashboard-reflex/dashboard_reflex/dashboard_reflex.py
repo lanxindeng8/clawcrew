@@ -102,6 +102,32 @@ class State(rx.State):
             position_top="60%",
             position_left="15%",
         ),
+        Agent(
+            name="GitHub",
+            emoji="🐙",
+            role="PR & Issue Manager",
+            status="online",
+            model="claude-3-haiku",
+            tokens=1850,
+            tasks=24,
+            current_task="",
+            color="#24292f",
+            position_top="30%",
+            position_left="80%",
+        ),
+        Agent(
+            name="Audit",
+            emoji="🔍",
+            role="Security Auditor",
+            status="away",
+            model="claude-3-sonnet",
+            tokens=980,
+            tasks=3,
+            current_task="",
+            color="#dc2626",
+            position_top="70%",
+            position_left="50%",
+        ),
     ]
 
     # Logs
@@ -121,6 +147,8 @@ class State(rx.State):
         "Design": 3800,
         "Code": 5120,
         "Test": 2300,
+        "GitHub": 1850,
+        "Audit": 980,
     }
 
     # Auto refresh
@@ -634,20 +662,30 @@ def virtual_office() -> rx.Component:
                 "margin": "0 auto 1rem",
             }
         ),
-        # Workflow arrows (center)
+        # Workflow arrows (center) - main pipeline
         rx.hstack(
-            rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-            rx.text("→", color="#6366f1", font_weight="bold", font_size="1.2rem"),
-            rx.el.span("🎨 Design", style={"background": "#8b5cf6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-            rx.text("→", color="#8b5cf6", font_weight="bold", font_size="1.2rem"),
-            rx.el.span("💻 Code", style={"background": "#3b82f6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-            rx.text("→", color="#3b82f6", font_weight="bold", font_size="1.2rem"),
-            rx.el.span("🧪 Test", style={"background": "#10b981", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+            rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
+            rx.text("→", color="#6366f1", font_weight="bold", font_size="1rem"),
+            rx.el.span("🎨 Design", style={"background": "#8b5cf6", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
+            rx.text("→", color="#8b5cf6", font_weight="bold", font_size="1rem"),
+            rx.el.span("💻 Code", style={"background": "#3b82f6", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
+            rx.text("→", color="#3b82f6", font_weight="bold", font_size="1rem"),
+            rx.el.span("🧪 Test", style={"background": "#10b981", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
+            rx.text("→", color="#10b981", font_weight="bold", font_size="1rem"),
+            rx.el.span("🐙 GitHub", style={"background": "#24292f", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
             spacing="2",
             justify="center",
-            margin_bottom="1.5rem",
+            wrap="wrap",
         ),
-        # Agent cards in a grid (not absolute positioning)
+        # Secondary: Audit monitors all
+        rx.hstack(
+            rx.el.span("🔍 Audit", style={"background": "#dc2626", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.7rem"}),
+            rx.text("monitors all stages", color=COLORS["text_secondary"], font_size="0.75rem"),
+            spacing="2",
+            justify="center",
+            margin_bottom="1rem",
+        ),
+        # Agent cards in a 3x2 grid
         rx.el.div(
             rx.foreach(
                 State.agents,
@@ -655,7 +693,7 @@ def virtual_office() -> rx.Component:
             ),
             style={
                 "display": "grid",
-                "grid_template_columns": "repeat(4, 1fr)",
+                "grid_template_columns": "repeat(3, 1fr)",
                 "gap": "1rem",
                 "width": "100%",
             }
