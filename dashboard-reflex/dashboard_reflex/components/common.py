@@ -127,14 +127,19 @@ def stat_card(
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(15, 15, 28, 0.7)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "16px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1rem 1.25rem 1rem 1.5rem",
             "min_width": "180px",
@@ -142,9 +147,9 @@ def stat_card(
             "overflow": "hidden",
             "transition": "all 0.25s ease",
             "_hover": {
-                "border_color": f"{color}30",
+                "border_color": f"{color}40",
                 "transform": "translateY(-2px)",
-                "box_shadow": f"0 8px 24px {color}10",
+                "box_shadow": f"0 8px 24px {color}15",
             },
         }
     )
@@ -183,7 +188,11 @@ def stat_card_mini(icon: str, label: str, value, color: str = COLORS["primary"])
                 rx.text(
                     label,
                     font_size="0.65rem",
-                    color=COLORS["text_muted"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_muted"],
+                        "#64748b",
+                    ),
                 ),
                 spacing="0",
                 align="start",
@@ -195,13 +204,18 @@ def stat_card_mini(icon: str, label: str, value, color: str = COLORS["primary"])
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(15, 15, 28, 0.6)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "border_radius": "12px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "0.75rem 1rem",
         }
@@ -434,14 +448,19 @@ def task_input_bar() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(18, 18, 28, 0.8)",
-                "rgba(255, 255, 255, 0.95)",
+                "white",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "18px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "0.75rem",
             "margin_bottom": "1.5rem",

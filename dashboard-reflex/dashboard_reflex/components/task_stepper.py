@@ -24,11 +24,18 @@ def pipeline_step(
     is_active = status == "active"
     is_error = status == "error"
 
+    # For pending state, use different background based on mode
+    pending_bg = rx.cond(
+        DashboardState.dark_mode,
+        "rgba(255, 255, 255, 0.05)",
+        "#f1f5f9",
+    )
+
     icon_bg = (
         COLORS["status_online"] if is_completed else
         COLORS["status_working"] if is_active else
         COLORS["status_error"] if is_error else
-        "rgba(255, 255, 255, 0.05)"
+        pending_bg
     )
 
     border_color = (
@@ -38,9 +45,10 @@ def pipeline_step(
         COLORS["border_subtle"]
     )
 
-    text_color = (
-        COLORS["text_primary"] if (is_completed or is_active) else
-        COLORS["text_muted"]
+    text_color = rx.cond(
+        DashboardState.dark_mode,
+        COLORS["text_primary"] if (is_completed or is_active) else COLORS["text_muted"],
+        "#1e293b" if (is_completed or is_active) else "#94a3b8",
     )
 
     return rx.el.div(
@@ -145,7 +153,11 @@ def pipeline_connector(is_completed: bool = False, is_active: bool = False) -> r
             style={
                 "height": "3px",
                 "width": "100%",
-                "background": COLORS["border_subtle"],
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["border_subtle"],
+                    "#e2e8f0",
+                ),
                 "border_radius": "2px",
             }
         ),
@@ -219,13 +231,17 @@ def task_stepper() -> rx.Component:
                         color=rx.cond(
                             DashboardState.dark_mode,
                             COLORS["text_primary"],
-                            "#0f172a",
+                            "#1e293b",
                         ),
                     ),
                     rx.text(
                         "Real-time workflow progress",
                         font_size="0.7rem",
-                        color=COLORS["text_muted"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_muted"],
+                            "#64748b",
+                        ),
                     ),
                     spacing="0",
                     align="start",
@@ -252,7 +268,7 @@ def task_stepper() -> rx.Component:
                             "background": rx.cond(
                                 DashboardState.dark_mode,
                                 COLORS["border_subtle"],
-                                "rgba(0, 0, 0, 0.1)",
+                                "#e2e8f0",
                             ),
                             "border_radius": "3px",
                             "overflow": "hidden",
@@ -271,7 +287,7 @@ def task_stepper() -> rx.Component:
                     "background": rx.cond(
                         DashboardState.dark_mode,
                         "rgba(255, 255, 255, 0.03)",
-                        "rgba(0, 0, 0, 0.03)",
+                        "#f1f5f9",
                     ),
                     "padding": "8px 14px",
                     "border_radius": "10px",
@@ -387,7 +403,7 @@ def task_stepper() -> rx.Component:
                 "background": rx.cond(
                     DashboardState.dark_mode,
                     "rgba(255, 255, 255, 0.02)",
-                    "rgba(0, 0, 0, 0.02)",
+                    "#f8fafc",
                 ),
                 "border_radius": "18px",
                 "padding": "1.75rem 1.5rem",
@@ -399,14 +415,19 @@ def task_stepper() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(15, 15, 28, 0.7)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "backdrop_filter": "blur(24px)",
             "border_radius": "24px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1.5rem",
         }

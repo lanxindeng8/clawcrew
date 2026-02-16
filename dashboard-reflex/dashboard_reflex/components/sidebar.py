@@ -41,18 +41,34 @@ def nav_item(icon: str, label: str, page: str) -> rx.Component:
             "border_radius": "10px",
             "background": rx.cond(
                 is_active,
-                f"linear-gradient(135deg, {COLORS['primary']}20, {COLORS['secondary']}12)",
+                rx.cond(
+                    DashboardState.dark_mode,
+                    f"linear-gradient(135deg, {COLORS['primary']}20, {COLORS['secondary']}12)",
+                    COLORS["primary"],  # Solid purple in light mode
+                ),
                 "transparent",
             ),
             "border": rx.cond(
                 is_active,
-                f"1px solid {COLORS['border_accent']}",
+                rx.cond(
+                    DashboardState.dark_mode,
+                    f"1px solid {COLORS['border_accent']}",
+                    f"1px solid {COLORS['primary']}",
+                ),
                 "1px solid transparent",
             ),
             "color": rx.cond(
                 is_active,
-                COLORS["text_primary"],
-                COLORS["text_secondary"],
+                rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_primary"],
+                    "white",  # White text on purple in light mode
+                ),
+                rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_secondary"],
+                    "#334155",  # Darker text in light mode
+                ),
             ),
             "cursor": "pointer",
             "transition": "all 0.2s ease",
@@ -60,10 +76,22 @@ def nav_item(icon: str, label: str, page: str) -> rx.Component:
             "_hover": {
                 "background": rx.cond(
                     is_active,
-                    f"linear-gradient(135deg, {COLORS['primary']}25, {COLORS['secondary']}15)",
-                    "rgba(124, 58, 237, 0.08)",
+                    rx.cond(
+                        DashboardState.dark_mode,
+                        f"linear-gradient(135deg, {COLORS['primary']}25, {COLORS['secondary']}15)",
+                        COLORS["primary_dark"],
+                    ),
+                    rx.cond(
+                        DashboardState.dark_mode,
+                        "rgba(124, 58, 237, 0.08)",
+                        "rgba(124, 58, 237, 0.12)",
+                    ),
                 ),
-                "color": COLORS["text_primary"],
+                "color": rx.cond(
+                    is_active,
+                    rx.cond(DashboardState.dark_mode, COLORS["text_primary"], "white"),
+                    rx.cond(DashboardState.dark_mode, COLORS["text_primary"], "#1e293b"),
+                ),
             },
         },
         on_click=lambda: DashboardState.navigate(page),
@@ -129,7 +157,11 @@ def agent_list_item(agent) -> rx.Component:
                         agent.name,
                         font_size="0.85rem",
                         font_weight="500",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#1e293b",
+                        ),
                     ),
                     rx.hstack(
                         # Status dot
@@ -149,7 +181,11 @@ def agent_list_item(agent) -> rx.Component:
                         rx.text(
                             agent.status.to(str).title(),
                             font_size="0.7rem",
-                            color=COLORS["text_muted"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_muted"],
+                                "#64748b",
+                            ),
                         ),
                         spacing="1",
                         align="center",
@@ -172,7 +208,11 @@ def agent_list_item(agent) -> rx.Component:
         style={
             "transition": "all 0.15s ease",
             "_hover": {
-                "background": "rgba(255, 255, 255, 0.04)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.04)",
+                    "rgba(0, 0, 0, 0.04)",
+                ),
             },
         },
         on_click=lambda: DashboardState.open_agent_drawer(agent.id),
@@ -209,13 +249,21 @@ def sidebar() -> rx.Component:
                             "ClawCrew",
                             font_size="1.15rem",
                             font_weight="700",
-                            color=COLORS["text_primary"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_primary"],
+                                "#1e293b",
+                            ),
                             letter_spacing="0.3px",
                         ),
                         rx.text(
                             "AI Agent Dashboard",
                             font_size="0.7rem",
-                            color=COLORS["text_muted"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_muted"],
+                                "#64748b",
+                            ),
                         ),
                         spacing="0",
                         align="start",
@@ -242,9 +290,21 @@ def sidebar() -> rx.Component:
                     "width": "28px",
                     "height": "28px",
                     "border_radius": "50%",
-                    "background": COLORS["bg_dark"],
-                    "border": f"1px solid {COLORS['border_muted']}",
-                    "color": COLORS["text_secondary"],
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["bg_dark"],
+                        "white",
+                    ),
+                    "border": rx.cond(
+                        DashboardState.dark_mode,
+                        f"1px solid {COLORS['border_muted']}",
+                        "1px solid #e2e8f0",
+                    ),
+                    "color": rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_secondary"],
+                        "#64748b",
+                    ),
                     "cursor": "pointer",
                     "display": "flex",
                     "align_items": "center",
@@ -272,7 +332,11 @@ def sidebar() -> rx.Component:
                         "NAVIGATION",
                         font_size="0.65rem",
                         font_weight="600",
-                        color=COLORS["text_dim"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_dim"],
+                            "#94a3b8",
+                        ),
                         letter_spacing="1.2px",
                         margin_bottom="8px",
                         padding_left="6px",
@@ -297,7 +361,11 @@ def sidebar() -> rx.Component:
                 style={
                     "height": "1px",
                     "width": "100%",
-                    "background": f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                        "linear-gradient(90deg, transparent, #e2e8f0, transparent)",
+                    ),
                     "margin": "8px 0",
                 }
             ),
@@ -311,7 +379,11 @@ def sidebar() -> rx.Component:
                             "AGENTS",
                             font_size="0.65rem",
                             font_weight="600",
-                            color=COLORS["text_dim"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_dim"],
+                                "#94a3b8",
+                            ),
                             letter_spacing="1.2px",
                         ),
                         rx.spacer(),
@@ -436,7 +508,11 @@ def sidebar() -> rx.Component:
                             rx.text(
                                 "Auto-refresh",
                                 font_size="0.8rem",
-                                color=COLORS["text_secondary"],
+                                color=rx.cond(
+                                    DashboardState.dark_mode,
+                                    COLORS["text_secondary"],
+                                    "#64748b",
+                                ),
                             ),
                             spacing="2",
                             align="center",
@@ -521,7 +597,11 @@ def sidebar() -> rx.Component:
                         rx.text(
                             f"Last: {DashboardState.last_refresh}",
                             font_size="0.7rem",
-                            color=COLORS["text_dim"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_dim"],
+                                "#94a3b8",
+                            ),
                             text_align="center",
                             margin_top="6px",
                         ),
@@ -532,7 +612,11 @@ def sidebar() -> rx.Component:
 
                 width="100%",
                 padding_top="12px",
-                border_top=f"1px solid {COLORS['border_subtle']}",
+                border_top=rx.cond(
+                    DashboardState.dark_mode,
+                    f"1px solid {COLORS['border_subtle']}",
+                    "1px solid #e2e8f0",
+                ),
             ),
 
             spacing="0",
@@ -548,12 +632,12 @@ def sidebar() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "linear-gradient(180deg, rgba(10, 10, 26, 0.96) 0%, rgba(5, 5, 15, 0.98) 100%)",
-                "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)",
+                "white",  # Solid white in light mode
             ),
             "border_right": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",  # Visible border in light mode
             ),
             "position": "fixed",
             "left": "0",

@@ -78,12 +78,20 @@ def right_panel() -> rx.Component:
                                 "Monitoring",
                                 font_size="1rem",
                                 font_weight="600",
-                                color=COLORS["text_primary"],
+                                color=rx.cond(
+                                    DashboardState.dark_mode,
+                                    COLORS["text_primary"],
+                                    "#1e293b",
+                                ),
                             ),
                             rx.text(
                                 "Real-time insights",
                                 font_size="0.65rem",
-                                color=COLORS["text_muted"],
+                                color=rx.cond(
+                                    DashboardState.dark_mode,
+                                    COLORS["text_muted"],
+                                    "#64748b",
+                                ),
                             ),
                             spacing="0",
                             align="start",
@@ -96,18 +104,34 @@ def right_panel() -> rx.Component:
                 rx.el.button(
                     "✕",
                     style={
-                        "background": "rgba(255,255,255,0.05)",
+                        "background": rx.cond(
+                            DashboardState.dark_mode,
+                            "rgba(255,255,255,0.05)",
+                            "rgba(0,0,0,0.05)",
+                        ),
                         "border": "none",
                         "border_radius": "8px",
                         "width": "28px",
                         "height": "28px",
                         "cursor": "pointer",
-                        "color": COLORS["text_muted"],
+                        "color": rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_muted"],
+                            "#64748b",
+                        ),
                         "font_size": "0.85rem",
                         "transition": "all 0.2s ease",
                         "_hover": {
-                            "background": "rgba(255,255,255,0.1)",
-                            "color": COLORS["text_primary"],
+                            "background": rx.cond(
+                                DashboardState.dark_mode,
+                                "rgba(255,255,255,0.1)",
+                                "rgba(0,0,0,0.1)",
+                            ),
+                            "color": rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_primary"],
+                                "#1e293b",
+                            ),
                         },
                     },
                     on_click=DashboardState.toggle_right_panel,
@@ -116,8 +140,16 @@ def right_panel() -> rx.Component:
             ),
             style={
                 "padding": "1rem 1.25rem",
-                "border_bottom": f"1px solid {COLORS['border_subtle']}",
-                "background": "rgba(255, 255, 255, 0.02)",
+                "border_bottom": rx.cond(
+                    DashboardState.dark_mode,
+                    f"1px solid {COLORS['border_subtle']}",
+                    "1px solid #e2e8f0",
+                ),
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.02)",
+                    "rgba(255, 255, 255, 0.8)",
+                ),
             }
         ),
 
@@ -131,7 +163,11 @@ def right_panel() -> rx.Component:
                 style={
                     "height": "1px",
                     "width": "100%",
-                    "background": f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        f"linear-gradient(90deg, transparent, {COLORS['border_subtle']}, transparent)",
+                        "linear-gradient(90deg, transparent, #e2e8f0, transparent)",
+                    ),
                     "margin": "1.5rem 0",
                 }
             ),
@@ -152,12 +188,12 @@ def right_panel() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "linear-gradient(180deg, rgba(10,10,22,0.98) 0%, rgba(6,6,14,0.99) 100%)",
-                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.99) 100%)",
+                "#f8fafc",
             ),
             "border_left": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
             ),
             "backdrop_filter": "blur(30px)",
             "display": "flex",
@@ -207,12 +243,20 @@ def virtual_office() -> rx.Component:
                         "Virtual Office",
                         font_size="1.15rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#1e293b",
+                        ),
                     ),
                     rx.text(
                         "Agent workspace overview",
                         font_size="0.7rem",
-                        color=COLORS["text_muted"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_muted"],
+                            "#64748b",
+                        ),
                     ),
                     spacing="0",
                     align="start",
@@ -293,7 +337,11 @@ def virtual_office() -> rx.Component:
                         font_size="0.7rem",
                         font_weight="600",
                         letter_spacing="1.5px",
-                        color=COLORS["text_muted"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_muted"],
+                            "#64748b",
+                        ),
                     ),
                     spacing="2",
                     margin_bottom="1rem",
@@ -314,9 +362,17 @@ def virtual_office() -> rx.Component:
                     "flex": "1",
                     "min_width": "280px",
                     "padding": "1.25rem",
-                    "background": f"linear-gradient(145deg, {COLORS['primary']}08, transparent)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        f"linear-gradient(145deg, {COLORS['primary']}08, transparent)",
+                        f"linear-gradient(145deg, {COLORS['primary']}05, transparent)",
+                    ),
                     "border_radius": "20px",
-                    "border": f"1px dashed {COLORS['primary']}25",
+                    "border": rx.cond(
+                        DashboardState.dark_mode,
+                        f"1px dashed {COLORS['primary']}25",
+                        "1px dashed #e2e8f0",
+                    ),
                 }
             ),
 
@@ -330,7 +386,11 @@ def virtual_office() -> rx.Component:
                         font_size="0.7rem",
                         font_weight="600",
                         letter_spacing="1.5px",
-                        color=COLORS["text_muted"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_muted"],
+                            "#64748b",
+                        ),
                     ),
                     spacing="2",
                     margin_bottom="1rem",
@@ -350,9 +410,17 @@ def virtual_office() -> rx.Component:
                 style={
                     "flex": "2",
                     "padding": "1.25rem",
-                    "background": f"linear-gradient(145deg, {COLORS['accent_cyan']}05, transparent)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        f"linear-gradient(145deg, {COLORS['accent_cyan']}05, transparent)",
+                        f"linear-gradient(145deg, {COLORS['accent_cyan']}03, transparent)",
+                    ),
                     "border_radius": "20px",
-                    "border": f"1px dashed {COLORS['accent_cyan']}20",
+                    "border": rx.cond(
+                        DashboardState.dark_mode,
+                        f"1px dashed {COLORS['accent_cyan']}20",
+                        "1px dashed #e2e8f0",
+                    ),
                 }
             ),
             spacing="5",
@@ -366,14 +434,19 @@ def virtual_office() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(15, 15, 28, 0.7)",
-                "rgba(255, 255, 255, 0.6)",
+                "white",
             ),
             "backdrop_filter": "blur(24px)",
             "border_radius": "24px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.06)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1.5rem",
         }

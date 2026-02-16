@@ -32,7 +32,11 @@ def token_ring_chart() -> rx.Component:
                     cy=str(size // 2),
                     r=str(radius),
                     fill="none",
-                    stroke="rgba(255, 255, 255, 0.05)",
+                    stroke=rx.cond(
+                        DashboardState.dark_mode,
+                        "rgba(255, 255, 255, 0.05)",
+                        "rgba(0, 0, 0, 0.08)",
+                    ),
                     stroke_width=str(stroke_width),
                 ),
                 # Orca segment (0-28%)
@@ -202,14 +206,19 @@ def token_ring_chart() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(18, 18, 28, 0.6)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1.5rem",
             "display": "flex",
@@ -231,18 +240,29 @@ def token_trend_chart() -> rx.Component:
     line_path = "M 20 80 L 50 65 L 80 70 L 110 55 L 140 60 L 170 45 L 200 50 L 230 35 L 260 40 L 280 30"
     fill_path = "M 20 100 L 20 80 L 50 65 L 80 70 L 110 55 L 140 60 L 170 45 L 200 50 L 230 35 L 260 40 L 280 30 L 280 100 Z"
 
+    # Grid line color based on mode
+    grid_stroke = rx.cond(
+        DashboardState.dark_mode,
+        "rgba(255,255,255,0.05)",
+        "rgba(0,0,0,0.08)",
+    )
+
     return rx.el.div(
         rx.text(
             "Token Trend (Last Hour)",
             font_size="0.8rem",
-            color=COLORS["text_muted"],
+            color=rx.cond(
+                DashboardState.dark_mode,
+                COLORS["text_muted"],
+                "#64748b",
+            ),
             margin_bottom="0.75rem",
         ),
         rx.el.svg(
             # Grid lines
-            rx.el.line(x1="20", y1="20", x2="280", y2="20", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
-            rx.el.line(x1="20", y1="50", x2="280", y2="50", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
-            rx.el.line(x1="20", y1="80", x2="280", y2="80", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
+            rx.el.line(x1="20", y1="20", x2="280", y2="20", stroke=grid_stroke, stroke_width="1"),
+            rx.el.line(x1="20", y1="50", x2="280", y2="50", stroke=grid_stroke, stroke_width="1"),
+            rx.el.line(x1="20", y1="80", x2="280", y2="80", stroke=grid_stroke, stroke_width="1"),
 
             # Fill area (using path instead of polygon)
             rx.el.path(
@@ -342,14 +362,19 @@ def token_trend_chart() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(18, 18, 28, 0.6)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1.5rem",
         }
@@ -382,13 +407,17 @@ def token_usage_section() -> rx.Component:
                     color=rx.cond(
                         DashboardState.dark_mode,
                         COLORS["text_primary"],
-                        "#0f172a",
+                        "#1e293b",
                     ),
                 ),
                 rx.text(
                     "Real-time consumption",
                     font_size="0.65rem",
-                    color=COLORS["text_muted"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_muted"],
+                        "#64748b",
+                    ),
                 ),
                 spacing="0",
                 align="start",

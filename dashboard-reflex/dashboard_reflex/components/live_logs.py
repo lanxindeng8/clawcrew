@@ -172,7 +172,7 @@ def live_logs() -> rx.Component:
                     color=rx.cond(
                         DashboardState.dark_mode,
                         COLORS["text_primary"],
-                        "#0f172a",
+                        "#1e293b",
                     ),
                 ),
                 spacing="2",
@@ -326,7 +326,7 @@ def live_logs() -> rx.Component:
                 "background": rx.cond(
                     DashboardState.dark_mode,
                     "rgba(10, 10, 18, 0.8)",
-                    "rgba(255, 255, 255, 0.95)",
+                    "white",
                 ),
                 "border_radius": "14px",
                 "max_height": "350px",
@@ -334,7 +334,7 @@ def live_logs() -> rx.Component:
                 "border": rx.cond(
                     DashboardState.dark_mode,
                     f"1px solid {COLORS['border_subtle']}",
-                    "1px solid rgba(0, 0, 0, 0.08)",
+                    "1px solid #e2e8f0",
                 ),
             }
         ),
@@ -344,7 +344,11 @@ def live_logs() -> rx.Component:
             rx.text(
                 f"Showing {DashboardState.filtered_logs.length()} logs",
                 font_size="0.75rem",
-                color=COLORS["text_muted"],
+                color=rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_muted"],
+                    "#64748b",
+                ),
             ),
             rx.spacer(),
             rx.hstack(
@@ -373,14 +377,19 @@ def live_logs() -> rx.Component:
             "background": rx.cond(
                 DashboardState.dark_mode,
                 "rgba(18, 18, 28, 0.6)",
-                "rgba(255, 255, 255, 0.9)",
+                "white",
             ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
             "border": rx.cond(
                 DashboardState.dark_mode,
                 f"1px solid {COLORS['border_subtle']}",
-                "1px solid rgba(0, 0, 0, 0.08)",
+                "1px solid #e2e8f0",
+            ),
+            "box_shadow": rx.cond(
+                DashboardState.dark_mode,
+                "none",
+                "0 1px 3px rgba(0, 0, 0, 0.08)",
             ),
             "padding": "1.5rem",
         }
