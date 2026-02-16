@@ -2,11 +2,12 @@
 ClawCrew CLI - Main entry point.
 
 Usage:
-    clawcrew init              # Interactive setup wizard
-    clawcrew start             # Start the system
-    clawcrew run <agent> -t "task"  # Run an agent
-    clawcrew agents            # List available agents
-    clawcrew status            # Show system status
+    clawcrew init                           # Interactive setup wizard
+    clawcrew start                          # Start the system
+    clawcrew run <agent> -t "task"          # Run an agent
+    clawcrew chain "task" design code test  # Chain multiple agents
+    clawcrew agents                         # List available agents
+    clawcrew status                         # Show system status
 """
 
 import typer
@@ -44,11 +45,13 @@ def main(
 
 # Import and register commands
 from clawcrew.cli.run import run
+from clawcrew.cli.chain import chain
 from clawcrew.cli.agents import agents, show_memory, clear_memory
 from clawcrew.cli.init import init
 from clawcrew.cli.system import start, stop, status
 
 app.command()(run)
+app.command()(chain)
 app.command()(agents)
 app.command("show-memory")(show_memory)
 app.command("clear-memory")(clear_memory)
