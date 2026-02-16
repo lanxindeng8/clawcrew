@@ -627,6 +627,8 @@ def agent_card_grid(agent) -> rx.Component:
         # Card container styles
         style={
             "position": "relative",
+            "width": "180px",
+            "min_height": "280px",
             "background": "rgba(255,255,255,0.95)",
             "backdrop_filter": "blur(10px)",
             "border_radius": "12px",
@@ -700,17 +702,19 @@ def virtual_office() -> rx.Component:
                         "letter_spacing": "1px",
                     }
                 ),
-                rx.vstack(
+                rx.el.div(
                     rx.foreach(
                         State.agents[:2],  # Orca and Audit
                         agent_card_grid,
                     ),
-                    spacing="3",
-                    width="100%",
+                    style={
+                        "display": "flex",
+                        "flex_direction": "column",
+                        "gap": "1rem",
+                        "align_items": "center",
+                    }
                 ),
                 style={
-                    "width": "30%",
-                    "min_width": "200px",
                     "padding": "1rem",
                     "background": "rgba(99, 102, 241, 0.05)",
                     "border_radius": "16px",
@@ -738,12 +742,13 @@ def virtual_office() -> rx.Component:
                     ),
                     style={
                         "display": "grid",
-                        "grid_template_columns": "repeat(2, 1fr)",
+                        "grid_template_columns": "repeat(2, 180px)",
                         "gap": "1rem",
+                        "justify_content": "center",
                     }
                 ),
                 style={
-                    "width": "70%",
+                    "flex": "1",
                     "padding": "1rem",
                     "background": "rgba(59, 130, 246, 0.05)",
                     "border_radius": "16px",
