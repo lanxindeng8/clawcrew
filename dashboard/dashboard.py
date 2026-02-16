@@ -631,88 +631,61 @@ def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
     # ========== VIRTUAL OFFICE HEADER ==========
-    st.markdown("""
-    <div style="
-        background: linear-gradient(135deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.98) 100%),
-            url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80') center/cover;
-        background-blend-mode: overlay;
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    ">
-        <div style="text-align:center;margin-bottom:1rem;">
-            <span style="
-                background: linear-gradient(135deg, #6366f1, #8b5cf6);
-                color: white;
-                padding: 6px 20px;
-                border-radius: 25px;
-                font-size: 0.75rem;
-                font-weight: 700;
-                letter-spacing: 1px;
-                box-shadow: 0 4px 15px rgba(99,102,241,0.3);
-            ">🏢 VIRTUAL OFFICE</span>
-        </div>
-        <div style="display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-            <span style="background:#6366f1;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🦑 Orca</span>
-            <span style="color:#6366f1;font-weight:bold;">→</span>
-            <span style="background:#8b5cf6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🎨 Design</span>
-            <span style="color:#8b5cf6;font-weight:bold;">→</span>
-            <span style="background:#3b82f6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">💻 Code</span>
-            <span style="color:#3b82f6;font-weight:bold;">→</span>
-            <span style="background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🧪 Test</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div style="background:linear-gradient(135deg,rgba(248,250,252,0.95),rgba(241,245,249,0.95)),url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80') center/cover;border-radius:16px;padding:1.5rem;margin-bottom:1rem;border:1px solid #e2e8f0;">
+    <div style="text-align:center;margin-bottom:1rem;"><span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:6px 20px;border-radius:25px;font-size:0.75rem;font-weight:700;">🏢 VIRTUAL OFFICE</span></div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+    <span style="background:#6366f1;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🦑 Orca</span><span style="color:#6366f1;font-weight:bold;">→</span>
+    <span style="background:#8b5cf6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🎨 Design</span><span style="color:#8b5cf6;font-weight:bold;">→</span>
+    <span style="background:#3b82f6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">💻 Code</span><span style="color:#3b82f6;font-weight:bold;">→</span>
+    <span style="background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🧪 Test</span>
+    </div></div>""", unsafe_allow_html=True)
 
-    # ========== AGENT WORKSTATION CARDS ==========
+    # ========== AGENT WORKSTATION CARDS (Native Streamlit) ==========
     cols = st.columns(4, gap="medium")
-
     agent_colors = {"orca": "#6366f1", "design": "#8b5cf6", "code": "#3b82f6", "test": "#10b981"}
+    status_icons = {"running": "🟠", "idle": "🟢", "completed": "⚪", "error": "🔴"}
+    status_labels = {"running": "Working", "idle": "Online", "completed": "Done", "error": "Error"}
 
     for i, agent in enumerate(agents):
         with cols[i % 4]:
             status = agent.get("status", "idle")
             agent_name = agent.get("name", "agent").lower()
-            accent_color = agent_colors.get(agent_name, "#6366f1")
+            accent = agent_colors.get(agent_name, "#6366f1")
             is_lead = agent_name == "orca"
 
-            status_config = {
-                "running": {"bg": "#ffedd5", "color": "#c2410c", "dot": "#f97316", "label": "Working"},
-                "idle": {"bg": "#dcfce7", "color": "#15803d", "dot": "#22c55e", "label": "Online"},
-                "completed": {"bg": "#f1f5f9", "color": "#64748b", "dot": "#94a3b8", "label": "Done"},
-                "error": {"bg": "#fee2e2", "color": "#b91c1c", "dot": "#ef4444", "label": "Error"},
-            }
-            cfg = status_config.get(status, status_config["idle"])
+            with st.container(border=True):
+                # Header row: Lead badge + Desktop icon
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    if is_lead:
+                        st.markdown("👑 **LEAD**")
+                with c2:
+                    st.markdown("🖥️")
 
-            lead_badge = f'<div style="position:absolute;top:-10px;left:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;padding:3px 10px;border-radius:10px;font-size:0.65rem;font-weight:700;">👑 LEAD</div>' if is_lead else ''
+                # Avatar
+                st.markdown(f'<div style="text-align:center;font-size:2.5rem;margin:0.5rem 0;">{agent.get("emoji", "🤖")}</div>', unsafe_allow_html=True)
 
-            st.markdown(f"""
-            <div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:1rem;border:2px solid {accent_color}40;box-shadow:0 8px 25px rgba(0,0,0,0.08);position:relative;margin-top:12px;">
-                <div style="position:absolute;top:-12px;right:12px;font-size:1.2rem;background:white;padding:2px 6px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">🖥️</div>
-                {lead_badge}
-                <div style="position:absolute;top:12px;left:12px;width:12px;height:12px;border-radius:50%;background:{cfg['dot']};box-shadow:0 0 10px {cfg['dot']}80;"></div>
-                <div style="text-align:center;margin:0.5rem 0;">
-                    <div style="width:60px;height:60px;margin:0 auto;background:linear-gradient(145deg,#fff,#f1f5f9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid {accent_color};box-shadow:0 4px 12px rgba(0,0,0,0.1);">{agent.get('emoji', '🤖')}</div>
-                </div>
-                <h4 style="text-align:center;margin:0.4rem 0 0.2rem;font-size:0.95rem;color:#1e293b;">{agent.get('name', '?').title()}</h4>
-                <p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0 0 0.5rem;">{agent.get('role', 'Agent')}</p>
-                <div style="text-align:center;margin:0.5rem 0;">
-                    <span style="background:{cfg['bg']};color:{cfg['color']};padding:4px 12px;border-radius:15px;font-size:0.7rem;font-weight:600;">● {cfg['label']}</span>
-                </div>
-                <div style="background:#f8fafc;border-radius:8px;padding:6px 8px;margin-top:8px;font-size:0.7rem;">
-                    <div style="display:flex;justify-content:space-between;color:#64748b;"><span>📊 Tokens</span><span style="font-weight:600;color:#1e293b;">{format_tokens(agent.get('tokens', 0))}</span></div>
-                    <div style="display:flex;justify-content:space-between;color:#64748b;"><span>📋 Tasks</span><span style="font-weight:600;color:#1e293b;">{agent.get('task_count', 0)}</span></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                # Name & Role
+                st.markdown(f"**{agent.get('name', '?').title()}**")
+                st.caption(agent.get('role', 'Agent'))
 
-            if agent.get('current_task'):
-                task_text = agent.get('current_task', '')[:40]
-                if len(agent.get('current_task', '')) > 40:
-                    task_text += '...'
-                st.markdown(f'<div style="background:{accent_color}10;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:0.7rem;border-left:3px solid {accent_color};"><span style="color:#64748b;">💬 {task_text}</span></div>', unsafe_allow_html=True)
+                # Status
+                icon = status_icons.get(status, "⚪")
+                label = status_labels.get(status, status.title())
+                st.markdown(f"{icon} {label}")
+
+                st.divider()
+
+                # Stats
+                st.markdown(f"📊 Tokens: **{format_tokens(agent.get('tokens', 0))}**")
+                st.markdown(f"📋 Tasks: **{agent.get('task_count', 0)}**")
+
+                # Current task
+                if agent.get('current_task'):
+                    task = agent.get('current_task', '')[:35]
+                    if len(agent.get('current_task', '')) > 35:
+                        task += '...'
+                    st.caption(f"💬 {task}")
 
 
 def render_logs(logs: list):
