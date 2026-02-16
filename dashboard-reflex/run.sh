@@ -18,13 +18,13 @@ echo "================================"
 # Check if reflex is installed
 if ! python3 -c "import reflex" 2>/dev/null; then
     echo -e "${YELLOW}Installing dependencies...${NC}"
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
 fi
 
 # Initialize reflex if needed
 if [ ! -d ".web" ]; then
     echo -e "${YELLOW}Initializing Reflex...${NC}"
-    reflex init
+    python3 -m reflex init
 fi
 
 echo ""
@@ -36,4 +36,4 @@ echo ""
 echo "Press Ctrl+C to stop"
 
 # Run reflex
-reflex run
+python3 -m reflex run
