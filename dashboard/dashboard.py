@@ -830,10 +830,10 @@ if page == "home":
         margin-bottom: 1rem;
     ">
         <div style="display: flex; gap: 2rem; align-items: center;">
-            <div><span style="color:#64748b;font-size:0.75rem;">Tasks</span><br/><strong style="font-size:1.25rem;">{stats.get("total_tasks", 3)}</strong></div>
-            <div><span style="color:#64748b;font-size:0.75rem;">Running</span><br/><strong style="font-size:1.25rem;">{stats.get("agents_running", 2)}</strong></div>
-            <div><span style="color:#64748b;font-size:0.75rem;">Tokens</span><br/><strong style="font-size:1.25rem;">{format_tokens(tokens.get("total", 15420))}</strong></div>
-            <div><span style="color:#64748b;font-size:0.75rem;">Success</span><br/><strong style="font-size:1.25rem;">94%</strong></div>
+            <span><span style="color:#64748b;">Tasks:</span> <strong>{stats.get("total_tasks", 3)}</strong></span>
+            <span><span style="color:#64748b;">Running:</span> <strong>{stats.get("agents_running", 2)}</strong></span>
+            <span><span style="color:#64748b;">Tokens:</span> <strong>{format_tokens(tokens.get("total", 15420))}</strong></span>
+            <span><span style="color:#64748b;">Success:</span> <strong>94%</strong></span>
         </div>
         <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #64748b;">
             <span>🟢 Online</span>
