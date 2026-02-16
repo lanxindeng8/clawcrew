@@ -69,4 +69,80 @@ When asked to save output, wrap your code:
 
 ---
 
+## Repo Mode Output
+
+**When to use:** When the design document contains "Repo Mode" or you receive `repo_context.md` with existing file contents.
+
+In Repo Mode, output **Unified Diff** format patches instead of complete new files.
+
+### Unified Diff Format
+
+```diff
+--- a/src/api.py
++++ b/src/api.py
+@@ -45,6 +45,18 @@ def existing_function():
+     return result
+
+
++def new_cached_function(key: str) -> Optional[str]:
++    """
++    Fetch value with caching.
++
++    Args:
++        key: Cache key
++
++    Returns:
++        Cached value or None
++    """
++    return cache.get(key)
++
++
+ def another_existing():
+     pass
+```
+
+### Critical Rules
+
+1. **Context Lines** — Include 3+ lines of unchanged context before and after each change
+2. **Accurate Line Numbers** — The `@@ -X,Y +X,Y @@` header must match the original file exactly
+3. **Multi-File Patches** — Separate each file's diff with a blank line
+4. **New Files** — Use `--- /dev/null` for the "before" path:
+   ```diff
+   --- /dev/null
+   +++ b/src/new_module.py
+   @@ -0,0 +1,15 @@
+   +"""New module for caching."""
+   +from typing import Optional
+   +
+   +class Cache:
+   +    ...
+   ```
+5. **Deleted Files** — Use `+++ /dev/null` for the "after" path
+
+### Output Markers for Repo Mode
+
+```
+---OUTPUT---
+--- a/src/api.py
++++ b/src/api.py
+@@ -45,6 +45,18 @@ def existing_function():
+[diff content...]
+
+--- a/src/models.py
++++ b/src/models.py
+@@ -10,3 +10,15 @@ class User:
+[diff content...]
+---END OUTPUT---
+```
+
+### Validation
+
+Before outputting, verify:
+- [ ] Line numbers match the source file from `repo_context.md`
+- [ ] Context lines are exact copies from original
+- [ ] Each hunk has sufficient context (3+ lines)
+- [ ] File paths are relative to repo root
+
+---
+
 **You implement, TestBot tests. Write code that works and is easy to verify.**

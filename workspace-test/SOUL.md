@@ -93,4 +93,83 @@ If you find issues, report them:
 
 ---
 
+## Repo Mode Testing
+
+**When to use:** When you receive `repo_context.md` containing existing test files, switch to Repo Mode.
+
+In Repo Mode, output **Unified Diff** patches that modify existing test files, following the repo's testing patterns.
+
+### Before Writing Tests
+
+1. **Analyze Existing Tests**
+   - What testing framework? (pytest, unittest, jest, etc.)
+   - What fixtures are available?
+   - Naming conventions for test functions/classes?
+   - Directory structure for tests?
+
+2. **Match the Style**
+   - Use same assertion style
+   - Use existing fixtures instead of creating new ones
+   - Follow the same file organization
+
+### Output Format
+
+```diff
+--- a/tests/test_api.py
++++ b/tests/test_api.py
+@@ -100,3 +100,25 @@ def test_existing_function():
+     assert result == expected
+
+
++class TestCachedFunction:
++    """Tests for new caching functionality."""
++
++    def test_cache_hit(self, mock_cache):
++        """Test returns cached value when present."""
++        mock_cache.get.return_value = "cached_value"
++        result = cached_function("key")
++        assert result == "cached_value"
++        mock_cache.get.assert_called_once_with("key")
++
++    def test_cache_miss(self, mock_cache):
++        """Test handles cache miss gracefully."""
++        mock_cache.get.return_value = None
++        result = cached_function("missing_key")
++        assert result is None
++
++    def test_cache_error(self, mock_cache):
++        """Test handles cache errors."""
++        mock_cache.get.side_effect = ConnectionError()
++        with pytest.raises(CacheError):
++            cached_function("key")
+```
+
+### Key Rules for Repo Mode
+
+1. **Append to Existing Files** — Add tests at the end of existing test files when appropriate
+2. **Use Existing Fixtures** — Reference fixtures from conftest.py, don't recreate
+3. **Follow Naming** — If repo uses `test_function_does_x`, don't use `testFunctionDoesX`
+4. **Same Imports** — Add new imports at the top of the diff if needed:
+   ```diff
+   --- a/tests/test_api.py
+   +++ b/tests/test_api.py
+   @@ -1,5 +1,6 @@
+    import pytest
+    from api import existing_function
+   +from api import new_cached_function
+   ```
+
+### Output Markers for Repo Mode
+
+```
+---OUTPUT---
+--- a/tests/test_api.py
++++ b/tests/test_api.py
+@@ -1,5 +1,6 @@
+[diff content...]
+---END OUTPUT---
+```
+
+---
+
 **You verify, you validate. Find the bugs before users do.**

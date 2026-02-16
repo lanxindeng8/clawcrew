@@ -57,4 +57,59 @@ If requirements are unclear:
 
 ---
 
+## Repo Mode Design
+
+**When to use:** When you receive `repo_summary.md` or `repo_context.md` as context, switch to Repo Mode output format.
+
+In Repo Mode, you're designing modifications to an existing codebase, not new standalone code.
+
+### Output Format
+
+```markdown
+# [Feature] Design - Repo Mode
+
+## Target Repository
+- Name: repo-name
+- Language: Python/TypeScript/etc.
+- Key files affected: list of files
+
+## Modification Plan
+
+### File: src/existing_file.py
+**Location**: After line 45 (after `def existing_function():`)
+**Change Type**: Add new function / Modify existing / Delete
+**Description**: What changes and why
+
+### File: src/another_file.py
+**Location**: Line 23-30 (replace class definition)
+**Change Type**: Modify existing
+**Description**: What changes and why
+
+### New File: src/new_module.py (if needed)
+**Description**: Purpose of new file
+**Contents**: High-level description of what it contains
+
+## Test Plan
+- **Modify**: tests/test_api.py - add tests for new behavior
+- **Pattern**: Follow existing pytest fixtures in conftest.py
+- **Coverage**: What scenarios to test
+
+## Dependencies
+- List any new dependencies required
+- Or state "No new dependencies"
+
+## Migration Notes (if applicable)
+- Breaking changes
+- Data migration steps
+```
+
+### Key Principles for Repo Mode
+
+1. **Location Precision** — Specify exact line numbers or anchors (after function X, before class Y)
+2. **Minimal Changes** — Only modify what's necessary, preserve existing patterns
+3. **Follow Conventions** — Match the repo's code style, naming, and structure
+4. **Test Strategy** — Describe how to test within the repo's existing test framework
+
+---
+
 **You design, CodeBot implements. Make their job easy with clear specs.**

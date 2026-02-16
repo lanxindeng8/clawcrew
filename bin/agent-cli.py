@@ -12,6 +12,8 @@ Usage:
     ./bin/agent-cli.py list-agents
     ./bin/agent-cli.py show-memory -a design
     ./bin/agent-cli.py clear-memory -a design --all
+    ./bin/agent-cli.py summarize-repo --url https://github.com/user/repo --task-id task-001
+    ./bin/agent-cli.py read-files -r ~/.openclaw/artifacts/task-001/repo -f "src/api.py,tests/test_api.py"
 
 Agents:
     design  - System Architect: API design, data models, specifications
@@ -606,11 +608,187 @@ Format your analysis between these markers:
             typer.echo(summary)
 
     finally:
-        # Cleanup temp directory
-        if temp_dir and temp_dir.exists() and not keep_clone:
+        # Cleanup temp directory (keep clone if task_id is provided, unless explicitly told not to)
+        should_keep = keep_clone or (task_id is not None)
+        if temp_dir and temp_dir.exists() and not should_keep:
             if verbose:
                 typer.echo(f"[GITHUB] Cleaning up: {temp_dir}")
             shutil.rmtree(temp_dir, ignore_errors=True)
+        elif temp_dir and should_keep:
+            # Move clone to artifacts directory for persistence
+            artifacts_dir = Path.home() / ".openclaw" / "artifacts" / task_id
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
+            clone_dest = artifacts_dir / "repo"
+            if not clone_dest.exists() and repo_path and repo_path.exists():
+                shutil.move(str(repo_path), str(clone_dest))
+                if verbose:
+                    typer.echo(f"[GITHUB] Clone saved to: {clone_dest}")
+
+
+@app.command("read-files")
+def read_files(
+    repo_path: str = typer.Option(..., "--repo-path", "-r", help="Path to repository root"),
+    files: str = typer.Option(..., "--files", "-f", help="Comma-separated file paths (relative to repo root)"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    line_numbers: bool = typer.Option(True, "--line-numbers/--no-line-numbers", help="Include line numbers"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Read specific files from a repository and format for agent context.
+
+    Outputs files with line numbers in a format suitable for agents to
+    understand exact locations for modifications (Repo Mode).
+
+    Examples:
+
+        # Read specific files
+        ./bin/agent-cli.py read-files -r ./repo -f "src/api.py,src/models.py"
+
+        # Read and save to context file
+        ./bin/agent-cli.py read-files -r ~/.openclaw/artifacts/task-001/repo \\
+            -f "src/api.py,tests/test_api.py" -o repo_context.md
+
+        # Read without line numbers
+        ./bin/agent-cli.py read-files -r ./repo -f "README.md" --no-line-numbers
+    """
+    repo = Path(repo_path).resolve()
+
+    if not repo.exists():
+        typer.echo(f"Error: Repository path does not exist: {repo_path}", err=True)
+        raise typer.Exit(1)
+
+    if not repo.is_dir():
+        typer.echo(f"Error: Path is not a directory: {repo_path}", err=True)
+        raise typer.Exit(1)
+
+    # Parse file list
+    file_list = [f.strip() for f in files.split(",") if f.strip()]
+
+    if not file_list:
+        typer.echo("Error: No files specified", err=True)
+        raise typer.Exit(1)
+
+    if verbose:
+        typer.echo(f"[READ-FILES] Reading {len(file_list)} files from {repo}")
+
+    content_parts = ["# Repository File Contents\n"]
+    content_parts.append(f"**Repository:** `{repo}`\n")
+    content_parts.append(f"**Files:** {len(file_list)}\n\n")
+    content_parts.append("---\n")
+
+    files_read = 0
+    files_missing = 0
+
+    for file_path in file_list:
+        full_path = repo / file_path
+
+        if not full_path.exists():
+            if verbose:
+                typer.echo(f"[READ-FILES] Warning: File not found: {file_path}")
+            content_parts.append(f"\n## File: {file_path}\n\n")
+            content_parts.append("**Status:** File not found\n\n")
+            files_missing += 1
+            continue
+
+        if not full_path.is_file():
+            if verbose:
+                typer.echo(f"[READ-FILES] Warning: Not a file: {file_path}")
+            content_parts.append(f"\n## File: {file_path}\n\n")
+            content_parts.append("**Status:** Not a regular file\n\n")
+            files_missing += 1
+            continue
+
+        # Determine language for code fence
+        ext = full_path.suffix.lower()
+        lang_map = {
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".tsx": "tsx",
+            ".jsx": "jsx",
+            ".go": "go",
+            ".rs": "rust",
+            ".rb": "ruby",
+            ".java": "java",
+            ".c": "c",
+            ".cpp": "cpp",
+            ".h": "c",
+            ".hpp": "cpp",
+            ".cs": "csharp",
+            ".php": "php",
+            ".swift": "swift",
+            ".kt": "kotlin",
+            ".scala": "scala",
+            ".sh": "bash",
+            ".bash": "bash",
+            ".zsh": "zsh",
+            ".yml": "yaml",
+            ".yaml": "yaml",
+            ".json": "json",
+            ".xml": "xml",
+            ".html": "html",
+            ".css": "css",
+            ".scss": "scss",
+            ".sql": "sql",
+            ".md": "markdown",
+            ".toml": "toml",
+            ".ini": "ini",
+            ".cfg": "ini",
+        }
+        lang = lang_map.get(ext, "")
+
+        try:
+            file_content = full_path.read_text(encoding="utf-8")
+            lines = file_content.splitlines()
+
+            content_parts.append(f"\n## File: {file_path}\n\n")
+            content_parts.append(f"**Lines:** {len(lines)}\n\n")
+            content_parts.append(f"```{lang}\n")
+
+            if line_numbers:
+                # Add line numbers
+                width = len(str(len(lines)))
+                for i, line in enumerate(lines, 1):
+                    content_parts.append(f"{i:>{width}}: {line}\n")
+            else:
+                content_parts.append(file_content)
+                if not file_content.endswith("\n"):
+                    content_parts.append("\n")
+
+            content_parts.append("```\n")
+            files_read += 1
+
+            if verbose:
+                typer.echo(f"[READ-FILES] Read: {file_path} ({len(lines)} lines)")
+
+        except UnicodeDecodeError:
+            content_parts.append(f"\n## File: {file_path}\n\n")
+            content_parts.append("**Status:** Binary file (cannot display)\n\n")
+            files_missing += 1
+        except Exception as e:
+            content_parts.append(f"\n## File: {file_path}\n\n")
+            content_parts.append(f"**Status:** Error reading file: {e}\n\n")
+            files_missing += 1
+
+    # Summary
+    content_parts.append("\n---\n")
+    content_parts.append(f"\n**Summary:** {files_read} files read, {files_missing} files missing/skipped\n")
+
+    final_content = "".join(content_parts)
+
+    # Output
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(final_content, encoding="utf-8")
+        typer.echo(f"[READ-FILES] Saved to: {output}")
+    else:
+        typer.echo(final_content)
+
+    if files_read > 0:
+        typer.echo(f"[READ-FILES] Done: {files_read} files read")
+    else:
+        typer.echo("[READ-FILES] Warning: No files were read successfully", err=True)
 
 
 @app.command("read-issue")

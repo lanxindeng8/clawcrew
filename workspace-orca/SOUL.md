@@ -45,57 +45,124 @@ These are DEPRECATED and WILL FAIL with error:
 - `-o, --output` — Output file path
 - `-c, --context` — Context file to include
 
-## GitHub Repository Handling
+## GitHub Repository Handling (Repo Mode)
 
-When a task involves a GitHub URL or references an external repository:
+When a task involves modifying an external GitHub repository, use **Repo Mode**. In this mode, agents output **Unified Diff patches** instead of standalone files.
 
-### Step 1: Analyze the Repository
+### Two Workflow Modes
+
+| Mode | When | Output |
+|------|------|--------|
+| **Standalone** | No external repo | Complete new files (`main.py`, `test_main.py`) |
+| **Repo Mode** | Task involves existing repo | Unified Diff patches (`changes.patch`, `tests.patch`) |
+
+### Repo Mode Workflow
+
+#### Step 1: Analyze Repository & Read Files
 
 ```bash
-# Analyze default branch
+# Analyze repo (clone is automatically saved to artifacts)
 ~/.openclaw/bin/agent-cli.py summarize-repo \
   --url https://github.com/user/repo \
   --task-id <task_id>
 
-# Or analyze a specific branch
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  --url https://github.com/user/repo \
-  --branch feature-branch \
-  --task-id <task_id>
+# Read specific files for detailed context
+~/.openclaw/bin/agent-cli.py read-files \
+  --repo-path ~/.openclaw/artifacts/<task_id>/repo \
+  --files "src/api.py,src/models.py,tests/test_api.py" \
+  -o ~/.openclaw/artifacts/<task_id>/repo_context.md
 ```
 
-This creates `~/.openclaw/artifacts/<task_id>/repo_summary.md` with:
-- Architecture overview
-- Tech stack identification
-- Key files and entry points
-- Dependencies
+**Output:**
+- `repo_summary.md` — Architecture overview
+- `repo_context.md` — File contents with line numbers
+- `repo/` — Cloned repository
 
-### Step 2: Use Summary as Context
-
-Pass the repo summary to other agents:
+#### Step 2: Design Phase (Repo Mode)
 
 ```bash
 ~/.openclaw/bin/agent-cli.py run -a design \
-  -t "Design feature X for this codebase" \
+  -t "Design [feature] for this codebase. Output in Repo Mode format specifying which files to modify and where." \
   -c ~/.openclaw/artifacts/<task_id>/repo_summary.md \
+  -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
   -o ~/.openclaw/artifacts/<task_id>/design.md
 ```
 
-### Workflow with External Repos
+**Review:** Design should specify exact files and line locations.
+
+#### Step 3: Code Phase (Output Diff)
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a code \
+  -t "Implement the design. Output as unified diff patches that can be applied with git apply." \
+  -c ~/.openclaw/artifacts/<task_id>/design.md \
+  -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
+  -o ~/.openclaw/artifacts/<task_id>/changes.patch
+```
+
+**Review:** Verify diff has correct line numbers and context.
+
+#### Step 4: Test Phase (Output Diff)
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a test \
+  -t "Add tests following the repo's testing patterns. Output as unified diff." \
+  -c ~/.openclaw/artifacts/<task_id>/changes.patch \
+  -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
+  -o ~/.openclaw/artifacts/<task_id>/tests.patch
+```
+
+#### Step 5: Apply Patches & Create PR
+
+```bash
+# Apply patches to the cloned repo
+cd ~/.openclaw/artifacts/<task_id>/repo
+git apply ../changes.patch
+git apply ../tests.patch
+
+# Verify patches applied cleanly
+git diff
+
+# Create branch and commit
+git checkout -b feature-<task_id>
+git add -A
+git commit -m "Add [feature description]"
+
+# Create PR
+~/.openclaw/bin/agent-cli.py create-pr \
+  -r user/repo \
+  -t "[Feature] Description" \
+  -H feature-<task_id>
+```
+
+### Repo Mode Announcement Template
 
 ```markdown
 ## Task Received
-User wants to add feature to https://github.com/user/repo
+User wants to add [feature] to https://github.com/user/repo
 
-## Execution Plan
-1. **Repo Analysis** — Summarize repository structure
-2. **Design Phase** — Design feature using repo context
-3. **Code Phase** — Implementation following repo patterns
-4. **Delivery** — Code ready for PR
+## Execution Plan (Repo Mode)
+1. **Repo Analysis** — Clone and analyze repository structure
+2. **File Reading** — Read relevant source files with line numbers
+3. **Design Phase** — Design modifications (Repo Mode format)
+4. **Code Phase** — Output unified diff patches
+5. **Test Phase** — Output test patches following repo patterns
+6. **Apply & PR** — Apply patches and create Pull Request
 
 Task ID: <task_id>
 Starting with repo analysis...
 ```
+
+### Validate Before PR
+
+Before creating a PR, always verify:
+```bash
+cd ~/.openclaw/artifacts/<task_id>/repo
+git apply --check ../changes.patch  # Dry run
+git apply --check ../tests.patch    # Dry run
+```
+
+If patches fail to apply, re-run code/test agents with corrected context.
 
 ## Standard Workflow
 
