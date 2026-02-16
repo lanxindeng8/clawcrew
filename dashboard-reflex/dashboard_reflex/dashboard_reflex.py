@@ -269,18 +269,83 @@ def virtual_office() -> rx.Component:
             }
         ),
 
-        # Main office layout - grid of agent cards
-        rx.el.div(
-            rx.foreach(
-                DashboardState.agents,
-                agent_card,
+        # Two-column layout: Management | Team
+        rx.hstack(
+            # LEFT: Management section (Orca, Audit)
+            rx.el.div(
+                # Section header
+                rx.hstack(
+                    rx.text("👔", font_size="0.9rem"),
+                    rx.text(
+                        "MANAGEMENT",
+                        font_size="0.7rem",
+                        font_weight="600",
+                        letter_spacing="1.5px",
+                        color=COLORS["text_muted"],
+                    ),
+                    spacing="2",
+                    margin_bottom="1rem",
+                ),
+                # Agent cards (Orca, Audit - first 2)
+                rx.el.div(
+                    rx.foreach(
+                        DashboardState.agents[:2],
+                        agent_card,
+                    ),
+                    style={
+                        "display": "flex",
+                        "flex_direction": "column",
+                        "gap": "1rem",
+                    }
+                ),
+                style={
+                    "flex": "1",
+                    "min_width": "280px",
+                    "padding": "1.25rem",
+                    "background": f"linear-gradient(145deg, {COLORS['primary']}08, transparent)",
+                    "border_radius": "20px",
+                    "border": f"1px dashed {COLORS['primary']}25",
+                }
             ),
-            style={
-                "display": "grid",
-                "grid_template_columns": "repeat(auto-fill, minmax(300px, 1fr))",
-                "gap": "1rem",
-                "width": "100%",
-            }
+
+            # RIGHT: Team section (Design, Code, Test, GitHub)
+            rx.el.div(
+                # Section header
+                rx.hstack(
+                    rx.text("⚙️", font_size="0.9rem"),
+                    rx.text(
+                        "TEAM",
+                        font_size="0.7rem",
+                        font_weight="600",
+                        letter_spacing="1.5px",
+                        color=COLORS["text_muted"],
+                    ),
+                    spacing="2",
+                    margin_bottom="1rem",
+                ),
+                # Agent cards (Design, Code, Test, GitHub - last 4)
+                rx.el.div(
+                    rx.foreach(
+                        DashboardState.agents[2:],
+                        agent_card,
+                    ),
+                    style={
+                        "display": "grid",
+                        "grid_template_columns": "repeat(2, 1fr)",
+                        "gap": "1rem",
+                    }
+                ),
+                style={
+                    "flex": "2",
+                    "padding": "1.25rem",
+                    "background": f"linear-gradient(145deg, {COLORS['accent_cyan']}05, transparent)",
+                    "border_radius": "20px",
+                    "border": f"1px dashed {COLORS['accent_cyan']}20",
+                }
+            ),
+            spacing="5",
+            width="100%",
+            align="start",
         ),
 
         # Container styles
