@@ -24,6 +24,8 @@ class Agent(rx.Base):
     tasks: int
     current_task: str = ""
     color: str = "#6366f1"
+    position_top: str = "50%"
+    position_left: str = "50%"
 
 
 class LogEntry(rx.Base):
@@ -46,56 +48,60 @@ class State(rx.State):
     total_tokens: int = 15420
     success_rate: str = "94%"
 
-    # Agents data
-    agents: List[Dict[str, Any]] = [
-        {
-            "name": "Orca",
-            "emoji": "🦑",
-            "role": "Orchestrator",
-            "status": "working",
-            "model": "claude-3-opus",
-            "tokens": 4200,
-            "tasks": 12,
-            "current_task": "Coordinating email validation task",
-            "color": "#6366f1",
-            "position": {"top": "20%", "left": "38%"},  # Center-ish
-        },
-        {
-            "name": "Design",
-            "emoji": "🎨",
-            "role": "Architect",
-            "status": "online",
-            "model": "claude-3-sonnet",
-            "tokens": 3800,
-            "tasks": 8,
-            "current_task": "",
-            "color": "#8b5cf6",
-            "position": {"top": "15%", "left": "10%"},  # Top-left
-        },
-        {
-            "name": "Code",
-            "emoji": "💻",
-            "role": "Engineer",
-            "status": "working",
-            "model": "claude-3-opus",
-            "tokens": 5120,
-            "tasks": 15,
-            "current_task": "Implementing email validation",
-            "color": "#3b82f6",
-            "position": {"top": "55%", "left": "65%"},  # Bottom-right
-        },
-        {
-            "name": "Test",
-            "emoji": "🧪",
-            "role": "QA Engineer",
-            "status": "online",
-            "model": "claude-3-sonnet",
-            "tokens": 2300,
-            "tasks": 6,
-            "current_task": "",
-            "color": "#10b981",
-            "position": {"top": "60%", "left": "15%"},  # Bottom-left
-        },
+    # Agents data - using typed Agent model for rx.foreach compatibility
+    agents: List[Agent] = [
+        Agent(
+            name="Orca",
+            emoji="🦑",
+            role="Orchestrator",
+            status="working",
+            model="claude-3-opus",
+            tokens=4200,
+            tasks=12,
+            current_task="Coordinating email validation task",
+            color="#6366f1",
+            position_top="20%",
+            position_left="38%",
+        ),
+        Agent(
+            name="Design",
+            emoji="🎨",
+            role="Architect",
+            status="online",
+            model="claude-3-sonnet",
+            tokens=3800,
+            tasks=8,
+            current_task="",
+            color="#8b5cf6",
+            position_top="15%",
+            position_left="10%",
+        ),
+        Agent(
+            name="Code",
+            emoji="💻",
+            role="Engineer",
+            status="working",
+            model="claude-3-opus",
+            tokens=5120,
+            tasks=15,
+            current_task="Implementing email validation",
+            color="#3b82f6",
+            position_top="55%",
+            position_left="65%",
+        ),
+        Agent(
+            name="Test",
+            emoji="🧪",
+            role="QA Engineer",
+            status="online",
+            model="claude-3-sonnet",
+            tokens=2300,
+            tasks=6,
+            current_task="",
+            color="#10b981",
+            position_top="60%",
+            position_left="15%",
+        ),
     ]
 
     # Logs
@@ -414,8 +420,8 @@ def agent_card(agent) -> rx.Component:
         # Card container styles
         style={
             "position": "absolute",
-            "top": agent["position"]["top"],
-            "left": agent["position"]["left"],
+            "top": agent.position_top,
+            "left": agent.position_left,
             "width": "200px",
             "background": "rgba(255,255,255,0.95)",
             "backdrop_filter": "blur(10px)",
