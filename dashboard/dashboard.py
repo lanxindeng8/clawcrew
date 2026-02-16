@@ -613,6 +613,36 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
 def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
+    # Office floor background container
+    st.markdown("""
+    <div style="
+        background:
+            linear-gradient(90deg, rgba(148,163,184,0.1) 1px, transparent 1px),
+            linear-gradient(rgba(148,163,184,0.1) 1px, transparent 1px),
+            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+        background-size: 40px 40px, 40px 40px, 100% 100%;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        border: 1px solid #e2e8f0;
+        position: relative;
+    ">
+        <div style="
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        ">🏢 VIRTUAL OFFICE</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # Agent cards in a 4-column grid (no legend here - moved to top bar)
     cols = st.columns(4)
 
@@ -900,6 +930,8 @@ if page == "home":
 
     render_agent_floor_native(agents)
 
+    st.divider()
+
     # === TASKS SECTION ===
     st.markdown("### 📋 Tasks")
     st.markdown("""
@@ -909,6 +941,8 @@ if page == "home":
     </div>
     """, unsafe_allow_html=True)
     st.progress(0.6, text="Orca → Design ✓ → Code (running) → Test")
+
+    st.divider()
 
     # === TOKEN USAGE SECTION ===
     st.markdown("### 📊 Token Usage")
@@ -935,6 +969,8 @@ if page == "home":
             st.markdown("🔹 **Orca**: +320")
             st.markdown("🔹 **Code**: +480")
             st.markdown("🔹 **Design**: +250")
+
+    st.divider()
 
     # === LIVE LOGS SECTION ===
     st.markdown("### 📜 Live Logs")
