@@ -1,6 +1,6 @@
 """
 ClawCrew Dashboard State Management
-Centralized application state with dark mode, drawer, filters, and auto-refresh.
+Centralized application state with real-time data integration.
 """
 
 import reflex as rx
@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
 import asyncio
+
+from .data_fetcher import data_fetcher
 
 
 # ============================================================
@@ -21,14 +23,14 @@ class Agent(BaseModel):
     emoji: str
     role: str
     status: str  # online, working, away, offline, error
-    model: str
-    tokens: int
-    tasks_completed: int
+    model: str = "claude-3-sonnet"
+    tokens: int = 0
+    tasks_completed: int = 0
     current_task: str = ""
     color: str = "#7B4CFF"
     soul_summary: str = ""
     recent_outputs: List[str] = Field(default_factory=list)
-    token_history: List[int] = Field(default_factory=list)  # Last 10 token readings
+    token_history: List[int] = Field(default_factory=list)
 
 
 class LogEntry(BaseModel):
@@ -43,8 +45,8 @@ class LogEntry(BaseModel):
 class TaskStep(BaseModel):
     """Task pipeline step."""
     name: str
-    agent: str
-    emoji: str
+    agent: str = ""
+    emoji: str = ""
     status: str  # pending, active, completed, error
     duration: str = ""
     tokens_used: int = 0
@@ -55,11 +57,12 @@ class TaskStep(BaseModel):
 # ============================================================
 
 class DashboardState(rx.State):
-    """Main dashboard application state."""
+    """Main dashboard application state with real-time updates."""
 
     # === Theme & UI ===
     dark_mode: bool = True
     sidebar_collapsed: bool = False
+    right_panel_collapsed: bool = False
     current_page: str = "home"
 
     # === Agent Drawer ===
@@ -71,138 +74,69 @@ class DashboardState(rx.State):
     active_tasks: int = 3
     total_tokens: int = 18420
     success_rate: float = 94.2
+    token_budget: int = 100000
 
     # === Agents ===
     agents: List[Agent] = [
         Agent(
-            id="orca",
-            name="Orca",
-            emoji="🦑",
-            role="Orchestrator",
-            status="working",
-            model="claude-3-opus",
-            tokens=4200,
-            tasks_completed=12,
-            current_task="Coordinating email validation task",
+            id="orca", name="Orca", emoji="🦑", role="Orchestrator",
+            status="working", model="claude-3-opus", tokens=4200,
+            tasks_completed=12, current_task="Coordinating email validation task",
             color="#7B4CFF",
-            soul_summary="Central orchestrator that coordinates all agent activities. Manages task distribution, quality gates, and workflow optimization.",
-            recent_outputs=[
-                "Quality gate passed → Calling CodeBot",
-                "Task dispatched to DesignBot",
-                "Workflow optimization complete",
-                "Agent health check: All systems nominal",
-                "Token budget allocated: 5000",
-            ],
+            soul_summary="Central orchestrator that coordinates all agent activities.",
+            recent_outputs=["Quality gate passed → Calling CodeBot", "Task dispatched to DesignBot"],
             token_history=[380, 420, 510, 480, 390, 450, 520, 480, 410, 420],
         ),
         Agent(
-            id="audit",
-            name="Audit",
-            emoji="🔍",
-            role="Token & Loop Monitor",
-            status="online",
-            model="claude-3-haiku",
-            tokens=980,
-            tasks_completed=156,
-            current_task="Monitoring agent runtime",
+            id="audit", name="Audit", emoji="🔍", role="Token Monitor",
+            status="online", model="claude-3-haiku", tokens=980,
+            tasks_completed=156, current_task="Monitoring agent runtime",
             color="#EF4444",
-            soul_summary="Monitors token consumption and detects infinite loops or stuck agents. Provides real-time alerts and cost optimization suggestions.",
-            recent_outputs=[
-                "Token budget: 82% remaining",
-                "No anomalies detected",
-                "Code agent efficiency: 94%",
-                "Loop detection: Clear",
-                "Cost optimization: -12% this session",
-            ],
+            soul_summary="Monitors token consumption and detects infinite loops.",
+            recent_outputs=["Token budget: 82% remaining", "No anomalies detected"],
             token_history=[80, 95, 88, 92, 85, 90, 98, 87, 91, 98],
         ),
         Agent(
-            id="design",
-            name="Design",
-            emoji="🎨",
-            role="Architect",
-            status="online",
-            model="claude-3-sonnet",
-            tokens=3800,
-            tasks_completed=8,
-            current_task="",
+            id="design", name="Design", emoji="🎨", role="Architect",
+            status="online", model="claude-3-sonnet", tokens=3800,
+            tasks_completed=8, current_task="",
             color="#A855F7",
-            soul_summary="System architect that designs solutions, creates specifications, and ensures architectural consistency across the codebase.",
-            recent_outputs=[
-                "API specification complete",
-                "Database schema designed",
-                "Component architecture documented",
-                "Design review passed",
-                "Technical debt assessment: Low",
-            ],
+            soul_summary="System architect that designs solutions and specifications.",
+            recent_outputs=["API specification complete", "Database schema designed"],
             token_history=[320, 380, 450, 420, 380, 400, 350, 380, 410, 380],
         ),
         Agent(
-            id="code",
-            name="Code",
-            emoji="💻",
-            role="Engineer",
-            status="working",
-            model="claude-3-opus",
-            tokens=5120,
-            tasks_completed=15,
-            current_task="Implementing email validation",
+            id="code", name="Code", emoji="💻", role="Engineer",
+            status="working", model="claude-3-opus", tokens=5120,
+            tasks_completed=15, current_task="Implementing email validation",
             color="#3B82F6",
-            soul_summary="Primary code implementation agent. Writes clean, tested, and documented code following best practices.",
-            recent_outputs=[
-                "Email validation regex implemented",
-                "Unit tests added: 12 passing",
-                "Type hints added to module",
-                "Documentation updated",
-                "Code review suggestions applied",
-            ],
+            soul_summary="Primary code implementation agent.",
+            recent_outputs=["Email validation regex implemented", "Unit tests added: 12 passing"],
             token_history=[480, 520, 580, 510, 490, 550, 520, 480, 510, 512],
         ),
         Agent(
-            id="test",
-            name="Test",
-            emoji="🧪",
-            role="QA Engineer",
-            status="online",
-            model="claude-3-sonnet",
-            tokens=2300,
-            tasks_completed=6,
-            current_task="",
+            id="test", name="Test", emoji="🧪", role="QA Engineer",
+            status="online", model="claude-3-sonnet", tokens=2300,
+            tasks_completed=6, current_task="",
             color="#10B981",
-            soul_summary="Quality assurance specialist that writes and runs tests, identifies edge cases, and ensures code reliability.",
-            recent_outputs=[
-                "Test coverage: 87%",
-                "All integration tests passing",
-                "Edge cases documented",
-                "Performance benchmarks updated",
-                "Security scan: No issues",
-            ],
+            soul_summary="Quality assurance specialist that writes and runs tests.",
+            recent_outputs=["Test coverage: 87%", "All integration tests passing"],
             token_history=[200, 220, 250, 230, 210, 240, 220, 230, 250, 230],
         ),
         Agent(
-            id="github",
-            name="GitHub",
-            emoji="🐙",
-            role="PR & Issue Manager",
-            status="online",
-            model="claude-3-haiku",
-            tokens=1850,
-            tasks_completed=24,
-            current_task="",
+            id="github", name="GitHub", emoji="🐙", role="PR Manager",
+            status="online", model="claude-3-haiku", tokens=2020,
+            tasks_completed=24, current_task="",
             color="#6366F1",
-            soul_summary="Manages GitHub operations including PR creation, issue tracking, code reviews, and repository maintenance.",
-            recent_outputs=[
-                "PR #142 created successfully",
-                "Issue #89 closed",
-                "Code review completed",
-                "Branch merged to main",
-                "Release notes generated",
-            ],
+            soul_summary="Manages GitHub operations including PR creation.",
+            recent_outputs=["PR #142 created successfully", "Issue #89 closed"],
             token_history=[150, 180, 200, 170, 190, 185, 175, 195, 180, 185],
         ),
     ]
 
     # === Task Pipeline ===
+    current_task_name: str = "Create email validation function"
+    current_task_id: str = "20240214-153042"
     task_steps: List[TaskStep] = [
         TaskStep(name="Orchestrate", agent="Orca", emoji="🦑", status="completed", duration="0.8s", tokens_used=320),
         TaskStep(name="Design", agent="Design", emoji="🎨", status="completed", duration="2.4s", tokens_used=850),
@@ -224,7 +158,7 @@ class DashboardState(rx.State):
     ]
 
     # === Log Filters ===
-    log_filter_agents: List[str] = []  # Empty = show all
+    log_filter_agents: List[str] = []
     log_search_query: str = ""
     log_auto_scroll: bool = True
 
@@ -235,10 +169,8 @@ class DashboardState(rx.State):
     # === Auto Refresh ===
     auto_refresh: bool = True
     last_refresh: str = ""
-    refresh_interval: int = 5  # seconds
-
-    # === Loading States ===
     is_loading: bool = False
+    data_source: str = "mock"
 
     # ============================================================
     # COMPUTED PROPERTIES
@@ -255,17 +187,12 @@ class DashboardState(rx.State):
     @rx.var
     def filtered_logs(self) -> List[LogEntry]:
         """Get logs filtered by agent and search query."""
-        result = self.logs
-
-        # Filter by agents
+        result = list(self.logs)
         if self.log_filter_agents:
             result = [log for log in result if log.agent in self.log_filter_agents]
-
-        # Filter by search query
         if self.log_search_query:
             query = self.log_search_query.lower()
             result = [log for log in result if query in log.message.lower()]
-
         return result
 
     @rx.var
@@ -281,6 +208,19 @@ class DashboardState(rx.State):
         return str(self.total_tokens)
 
     @rx.var
+    def token_budget_percent(self) -> float:
+        """Calculate token budget usage percentage."""
+        return min(100, (self.total_tokens / self.token_budget) * 100)
+
+    @rx.var
+    def token_budget_remaining(self) -> str:
+        """Format remaining token budget."""
+        remaining = self.token_budget - self.total_tokens
+        if remaining >= 1000:
+            return f"{remaining / 1000:.1f}K"
+        return str(remaining)
+
+    @rx.var
     def current_task_progress(self) -> int:
         """Calculate current task progress percentage."""
         completed = len([s for s in self.task_steps if s.status == "completed"])
@@ -292,60 +232,51 @@ class DashboardState(rx.State):
     # ============================================================
 
     def toggle_dark_mode(self):
-        """Toggle dark/light mode."""
         self.dark_mode = not self.dark_mode
 
     def toggle_sidebar(self):
-        """Toggle sidebar collapse state."""
         self.sidebar_collapsed = not self.sidebar_collapsed
 
+    def toggle_right_panel(self):
+        self.right_panel_collapsed = not self.right_panel_collapsed
+
     def navigate(self, page: str):
-        """Navigate to a page."""
         self.current_page = page
 
     def open_agent_drawer(self, agent_id: str):
-        """Open drawer with agent details."""
         self.selected_agent_id = agent_id
         self.drawer_open = True
 
     def close_drawer(self):
-        """Close the agent drawer."""
         self.drawer_open = False
         self.selected_agent_id = ""
 
     def set_drawer_open(self, open: bool):
-        """Handle drawer open state change."""
         if not open:
             self.drawer_open = False
             self.selected_agent_id = ""
 
     def toggle_log_filter(self, agent: str):
-        """Toggle agent in log filter."""
         if agent in self.log_filter_agents:
             self.log_filter_agents = [a for a in self.log_filter_agents if a != agent]
         else:
             self.log_filter_agents = [*self.log_filter_agents, agent]
 
     def set_log_search(self, query: str):
-        """Set log search query."""
         self.log_search_query = query
 
     def toggle_auto_scroll(self):
-        """Toggle log auto-scroll."""
         self.log_auto_scroll = not self.log_auto_scroll
 
     def set_new_task(self, value: str):
-        """Update new task input."""
         self.new_task_input = value
 
     async def send_task(self):
-        """Send a new task to Orca."""
         if not self.new_task_input.strip():
             return
 
         self.sending_task = True
 
-        # Add log entry
         new_log = LogEntry(
             id=str(len(self.logs) + 1),
             timestamp=datetime.now().strftime("%H:%M:%S"),
@@ -355,10 +286,8 @@ class DashboardState(rx.State):
         )
         self.logs = [new_log, *self.logs]
 
-        # Simulate API call
         await asyncio.sleep(0.5)
 
-        # Add Orca response
         orca_log = LogEntry(
             id=str(len(self.logs) + 1),
             timestamp=datetime.now().strftime("%H:%M:%S"),
@@ -368,23 +297,26 @@ class DashboardState(rx.State):
         )
         self.logs = [orca_log, *self.logs]
 
+        self.current_task_name = self.new_task_input
         self.new_task_input = ""
         self.sending_task = False
         self.total_tasks += 1
         self.active_tasks += 1
 
     def toggle_auto_refresh(self):
-        """Toggle auto-refresh."""
         self.auto_refresh = not self.auto_refresh
 
     async def refresh_data(self):
-        """Refresh dashboard data."""
         self.is_loading = True
-        await asyncio.sleep(0.3)  # Simulate API call
-        self.last_refresh = datetime.now().strftime("%H:%M:%S")
+        try:
+            data = await data_fetcher.fetch_all()
+            if data.get("tokens"):
+                self.total_tokens = data["tokens"].get("total", self.total_tokens)
+            self.last_refresh = datetime.now().strftime("%H:%M:%S")
+        except Exception as e:
+            print(f"Error refreshing data: {e}")
         self.is_loading = False
 
     def clear_log_filters(self):
-        """Clear all log filters."""
         self.log_filter_agents = []
         self.log_search_query = ""

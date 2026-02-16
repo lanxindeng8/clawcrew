@@ -1,6 +1,7 @@
 """
 ClawCrew Dashboard - Reflex Implementation
 2026-style AI Agent monitoring dashboard with glassmorphism design.
+Three-column professional layout.
 """
 
 import reflex as rx
@@ -14,6 +15,118 @@ from .components.token_chart import token_usage_section
 from .components.task_stepper import task_stepper
 from .components.live_logs import live_logs
 from .components.common import stat_card, task_input_bar, top_stats_bar
+
+
+# ============================================================
+# RIGHT PANEL: Token Usage + Live Logs (collapsible)
+# ============================================================
+
+def right_panel_toggle() -> rx.Component:
+    """Toggle button for right panel collapse/expand."""
+    return rx.el.button(
+        rx.cond(
+            DashboardState.right_panel_collapsed,
+            rx.text("◀", font_size="0.8rem"),
+            rx.text("▶", font_size="0.8rem"),
+        ),
+        style={
+            "position": "fixed",
+            "right": rx.cond(DashboardState.right_panel_collapsed, "10px", "390px"),
+            "top": "50%",
+            "transform": "translateY(-50%)",
+            "z_index": "100",
+            "width": "28px",
+            "height": "48px",
+            "background": f"linear-gradient(135deg, {COLORS['primary']}, {COLORS['primary_dark']})",
+            "border": "none",
+            "border_radius": "8px 0 0 8px",
+            "color": "white",
+            "cursor": "pointer",
+            "box_shadow": f"0 4px 12px {COLORS['primary']}40",
+            "transition": "right 0.3s ease",
+            "_hover": {
+                "opacity": "0.9",
+            }
+        },
+        on_click=DashboardState.toggle_right_panel,
+    )
+
+
+def right_panel() -> rx.Component:
+    """Right side panel with Token Usage and Live Logs."""
+    return rx.el.div(
+        # Panel header
+        rx.hstack(
+            rx.hstack(
+                rx.text("📊", font_size="1rem"),
+                rx.text(
+                    "MONITORING",
+                    font_size="0.7rem",
+                    font_weight="700",
+                    letter_spacing="1.5px",
+                    color=COLORS["text_muted"],
+                ),
+                spacing="2",
+            ),
+            rx.spacer(),
+            rx.el.button(
+                "✕",
+                style={
+                    "background": "rgba(255,255,255,0.05)",
+                    "border": "none",
+                    "border_radius": "6px",
+                    "width": "24px",
+                    "height": "24px",
+                    "cursor": "pointer",
+                    "color": COLORS["text_muted"],
+                    "font_size": "0.8rem",
+                    "_hover": {"background": "rgba(255,255,255,0.1)"},
+                },
+                on_click=DashboardState.toggle_right_panel,
+            ),
+            width="100%",
+            padding="1rem 1.25rem",
+            border_bottom=f"1px solid {COLORS['border_subtle']}",
+        ),
+
+        # Scrollable content
+        rx.el.div(
+            # Token Usage Section
+            token_usage_section(),
+
+            # Live Logs Section
+            rx.el.div(
+                live_logs(),
+                margin_top="1.5rem",
+            ),
+
+            style={
+                "padding": "1.25rem",
+                "overflow_y": "auto",
+                "flex": "1",
+            }
+        ),
+
+        style={
+            "width": "380px",
+            "height": "100vh",
+            "background": "linear-gradient(180deg, rgba(12,12,20,0.98) 0%, rgba(8,8,14,0.98) 100%)",
+            "border_left": f"1px solid {COLORS['border_subtle']}",
+            "backdrop_filter": "blur(30px)",
+            "display": "flex",
+            "flex_direction": "column",
+            "position": "fixed",
+            "right": "0",
+            "top": "0",
+            "z_index": "50",
+            "transition": "transform 0.3s ease",
+            "transform": rx.cond(
+                DashboardState.right_panel_collapsed,
+                "translateX(100%)",
+                "translateX(0)",
+            ),
+        }
+    )
 
 
 # ============================================================
@@ -179,7 +292,7 @@ def virtual_office() -> rx.Component:
 # ============================================================
 
 def home_page() -> rx.Component:
-    """Main home page with all dashboard sections."""
+    """Main home page with all dashboard sections (center column content)."""
     return rx.vstack(
         # Task input bar
         task_input_bar(),
@@ -198,25 +311,6 @@ def home_page() -> rx.Component:
             task_stepper(),
             margin_top="1.5rem",
             width="100%",
-        ),
-
-        # Token Usage & Live Logs row
-        rx.hstack(
-            rx.el.div(
-                token_usage_section(),
-                flex="1",
-                min_width="400px",
-            ),
-            rx.el.div(
-                live_logs(),
-                flex="1",
-                min_width="400px",
-            ),
-            spacing="4",
-            width="100%",
-            margin_top="1.5rem",
-            wrap="wrap",
-            align="start",
         ),
 
         spacing="0",
@@ -268,12 +362,12 @@ def other_page() -> rx.Component:
 # ============================================================
 
 def index() -> rx.Component:
-    """Main app layout with sidebar, content, and drawer."""
+    """Main app layout with three-column design: sidebar, content, right panel."""
     return rx.el.div(
-        # Sidebar
+        # Left: Sidebar (fixed)
         sidebar(),
 
-        # Main content
+        # Center: Main content area
         rx.el.main(
             rx.cond(
                 DashboardState.current_page == "home",
@@ -281,13 +375,21 @@ def index() -> rx.Component:
                 other_page(),
             ),
             style={
+                # Adjust margins based on sidebar and right panel state
                 "margin_left": rx.cond(DashboardState.sidebar_collapsed, "80px", "280px"),
+                "margin_right": rx.cond(DashboardState.right_panel_collapsed, "0px", "380px"),
                 "min_height": "100vh",
                 "background": f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #12121C 50%, #0A0A14 100%)",
                 "padding": "2rem",
-                "transition": "margin-left 0.3s ease",
+                "transition": "margin-left 0.3s ease, margin-right 0.3s ease",
             }
         ),
+
+        # Right: Monitoring panel (Token Usage + Live Logs)
+        right_panel(),
+
+        # Right panel toggle button
+        right_panel_toggle(),
 
         # Agent detail drawer
         agent_drawer(),
