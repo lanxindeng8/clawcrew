@@ -48,8 +48,9 @@ class State(rx.State):
     total_tokens: int = 15420
     success_rate: str = "94%"
 
-    # Agents data - using typed Agent model for rx.foreach compatibility
+    # Agents data - ordered: Supervisors first (Orca, Audit), then Workers
     agents: List[Agent] = [
+        # === SUPERVISORS (left side) ===
         Agent(
             name="Orca",
             emoji="🦑",
@@ -63,6 +64,20 @@ class State(rx.State):
             position_top="20%",
             position_left="38%",
         ),
+        Agent(
+            name="Audit",
+            emoji="🔍",
+            role="Token & Loop Monitor",
+            status="online",
+            model="claude-3-haiku",
+            tokens=980,
+            tasks=3,
+            current_task="Monitoring agent runtime",
+            color="#dc2626",
+            position_top="70%",
+            position_left="50%",
+        ),
+        # === WORKERS (right side, 2x2 grid) ===
         Agent(
             name="Design",
             emoji="🎨",
@@ -114,19 +129,6 @@ class State(rx.State):
             color="#24292f",
             position_top="30%",
             position_left="80%",
-        ),
-        Agent(
-            name="Audit",
-            emoji="🔍",
-            role="Security Auditor",
-            status="away",
-            model="claude-3-sonnet",
-            tokens=980,
-            tasks=3,
-            current_task="",
-            color="#dc2626",
-            position_top="70%",
-            position_left="50%",
         ),
     ]
 
@@ -641,7 +643,11 @@ def agent_card_grid(agent) -> rx.Component:
 # ============================================================
 
 def virtual_office() -> rx.Component:
-    """Render the Virtual Office agents area using grid layout."""
+    """Render the Virtual Office with supervisors on left, workers on right."""
+    # Filter agents into supervisors and workers
+    supervisor_names = ["Orca", "Audit"]
+    worker_names = ["Design", "Code", "Test", "GitHub"]
+
     return rx.el.div(
         # Office title badge
         rx.el.div(
@@ -662,7 +668,7 @@ def virtual_office() -> rx.Component:
                 "margin": "0 auto 1rem",
             }
         ),
-        # Workflow arrows (center) - main pipeline
+        # Workflow pipeline
         rx.hstack(
             rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.75rem"}),
             rx.text("→", color="#6366f1", font_weight="bold", font_size="1rem"),
@@ -676,27 +682,77 @@ def virtual_office() -> rx.Component:
             spacing="2",
             justify="center",
             wrap="wrap",
-        ),
-        # Secondary: Audit monitors all
-        rx.hstack(
-            rx.el.span("🔍 Audit", style={"background": "#dc2626", "color": "white", "padding": "4px 10px", "border_radius": "12px", "font_weight": "600", "font_size": "0.7rem"}),
-            rx.text("monitors all stages", color=COLORS["text_secondary"], font_size="0.75rem"),
-            spacing="2",
-            justify="center",
             margin_bottom="1rem",
         ),
-        # Agent cards in a 3x2 grid
-        rx.el.div(
-            rx.foreach(
-                State.agents,
-                agent_card_grid,
+        # Main office layout: Left (supervisors) | Right (workers)
+        rx.hstack(
+            # LEFT: Supervisor area
+            rx.el.div(
+                rx.el.div(
+                    "👔 Management",
+                    style={
+                        "text_align": "center",
+                        "font_size": "0.7rem",
+                        "font_weight": "600",
+                        "color": COLORS["text_secondary"],
+                        "margin_bottom": "0.75rem",
+                        "text_transform": "uppercase",
+                        "letter_spacing": "1px",
+                    }
+                ),
+                rx.vstack(
+                    rx.foreach(
+                        State.agents[:2],  # Orca and Audit
+                        agent_card_grid,
+                    ),
+                    spacing="3",
+                    width="100%",
+                ),
+                style={
+                    "width": "30%",
+                    "min_width": "200px",
+                    "padding": "1rem",
+                    "background": "rgba(99, 102, 241, 0.05)",
+                    "border_radius": "16px",
+                    "border": "2px dashed rgba(99, 102, 241, 0.2)",
+                }
             ),
-            style={
-                "display": "grid",
-                "grid_template_columns": "repeat(3, 1fr)",
-                "gap": "1rem",
-                "width": "100%",
-            }
+            # RIGHT: Worker area (2x2 grid)
+            rx.el.div(
+                rx.el.div(
+                    "⚙️ Workers",
+                    style={
+                        "text_align": "center",
+                        "font_size": "0.7rem",
+                        "font_weight": "600",
+                        "color": COLORS["text_secondary"],
+                        "margin_bottom": "0.75rem",
+                        "text_transform": "uppercase",
+                        "letter_spacing": "1px",
+                    }
+                ),
+                rx.el.div(
+                    rx.foreach(
+                        State.agents[2:],  # Design, Code, Test, GitHub
+                        agent_card_grid,
+                    ),
+                    style={
+                        "display": "grid",
+                        "grid_template_columns": "repeat(2, 1fr)",
+                        "gap": "1rem",
+                    }
+                ),
+                style={
+                    "width": "70%",
+                    "padding": "1rem",
+                    "background": "rgba(59, 130, 246, 0.05)",
+                    "border_radius": "16px",
+                    "border": "2px dashed rgba(59, 130, 246, 0.2)",
+                }
+            ),
+            spacing="4",
+            width="100%",
+            align="start",
         ),
         # Container styles with office background
         style={
