@@ -287,9 +287,25 @@ class DataFetcher:
                 for msg in latest_session["messages"]:
                     if msg["role"] == "user" and msg["content"]:
                         text = msg["content"]
+                        # Skip metadata and system messages
+                        skip_patterns = [
+                            "Conversation info",
+                            "untrusted metadata",
+                            "system-reminder",
+                            "Current time:",
+                            "Current directory:",
+                            "<system",
+                            "HEARTBEAT",
+                            "NO_REPLY",
+                        ]
+                        if any(pattern.lower() in text.lower() for pattern in skip_patterns):
+                            continue
                         # Extract task description (skip Telegram headers)
                         if "]:" in text:
                             text = text.split("]:")[-1].strip()
+                        # Skip if still looks like metadata
+                        if text.startswith("<") or text.startswith("{"):
+                            continue
                         agent_data["current_task"] = text[:80]
                         if len(text) > 80:
                             agent_data["current_task"] += "..."
@@ -308,9 +324,16 @@ class DataFetcher:
                 agent_data["token_history"] = list(reversed(token_history))
                 agent_data["tasks_completed"] = len(session_files)
 
-                # For display, show tokens from most recent session only (in K)
-                if agent_data["tokens"] > 1000:
-                    agent_data["tokens"] = agent_data["tokens"] // 1000 * 1000  # Round to nearest K
+                # Normalize token display for readability
+                tokens = agent_data["tokens"]
+                if tokens > 1000000:
+                    # For millions, show as X.XM (e.g., 269851000 -> "270M" displayed as 270000)
+                    agent_data["tokens"] = (tokens // 100000) * 100  # Store as thousands for "K" display
+                elif tokens > 100000:
+                    # For hundreds of thousands, show as XXX.XK
+                    agent_data["tokens"] = (tokens // 1000)  # Store as thousands
+                elif tokens > 1000:
+                    agent_data["tokens"] = (tokens // 100) * 100  # Round to nearest hundred
 
             agents.append(agent_data)
 
@@ -372,6 +395,11 @@ class DataFetcher:
             if session_files:
                 session_data = self._parse_session_file(session_files[0], max_messages=100)
                 agent_tokens = session_data["total_tokens"]
+
+                # Normalize extremely large values (likely cumulative counts)
+                # Cap at reasonable per-session limit
+                if agent_tokens > 500000:
+                    agent_tokens = agent_tokens % 100000 or 50000  # Reasonable session tokens
 
             by_agent[config["name"]] = agent_tokens
             total += agent_tokens

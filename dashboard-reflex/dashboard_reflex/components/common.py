@@ -114,11 +114,11 @@ def stat_card(
             style={
                 "position": "absolute",
                 "left": "0",
-                "top": "12px",
-                "bottom": "12px",
-                "width": "3px",
-                "background": f"linear-gradient(180deg, {color}, {color}60)",
-                "border_radius": "0 2px 2px 0",
+                "top": "0",
+                "bottom": "0",
+                "width": "4px",
+                "background": color,
+                "border_radius": "16px 0 0 16px",
             }
         ),
 
