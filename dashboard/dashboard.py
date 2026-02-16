@@ -900,66 +900,57 @@ if page == "home":
 
     render_agent_floor_native(agents)
 
-    # Current Task + Progress
+    # === TASKS SECTION ===
+    st.markdown("### 📋 Tasks")
     st.markdown("""
-    <div style="background:white;border-radius:10px;padding:0.75rem 1rem;border:1px solid #e2e8f0;margin:0.5rem 0;">
-        <strong>📋 Create email validation function</strong>
-        <span style="color:#64748b;font-size:0.8rem;margin-left:0.5rem;">Task ID: 20240214-153042 • Code phase</span>
+    <div style="background:white;border-radius:10px;padding:0.75rem 1rem;border:1px solid #e2e8f0;margin-bottom:0.5rem;">
+        <strong>Create email validation function</strong>
+        <span style="color:#64748b;font-size:0.8rem;margin-left:0.5rem;">ID: 20240214-153042 • Code phase</span>
     </div>
     """, unsafe_allow_html=True)
     st.progress(0.6, text="Orca → Design ✓ → Code (running) → Test")
 
-    st.divider()
+    # === TOKEN USAGE SECTION ===
+    st.markdown("### 📊 Token Usage")
+    token_data = tokens.get("by_agent", {"orca": 4200, "design": 3800, "code": 5120, "test": 2300})
 
-    # Two columns: Logs and Token chart
+    import pandas as pd
+    df = pd.DataFrame({
+        "Agent": list(token_data.keys()),
+        "Tokens": list(token_data.values())
+    })
+
     col1, col2 = st.columns([2, 1])
-
     with col1:
-        st.markdown("### 📜 Live Logs")
-
-        logs = fetch_api("/api/logs", [])
-        if not logs:
-            # Mock logs when API is unavailable
-            logs = [
-                {"timestamp": "2024-02-14T15:30:42", "agent": "orca", "message": "Received task: Create email validation function"},
-                {"timestamp": "2024-02-14T15:30:43", "agent": "orca", "message": "task_id = 20240214-153042"},
-                {"timestamp": "2024-02-14T15:30:45", "agent": "orca", "message": "Calling DesignBot: ./bin/agent-cli.py --agent design api-spec ..."},
-                {"timestamp": "2024-02-14T15:31:02", "agent": "design", "message": "Analyzing requirements..."},
-                {"timestamp": "2024-02-14T15:32:15", "agent": "design", "message": "Output saved to artifacts/20240214-153042/design.md"},
-                {"timestamp": "2024-02-14T15:32:18", "agent": "orca", "message": "Quality gate passed → Calling CodeBot ..."},
-                {"timestamp": "2024-02-14T15:32:45", "agent": "code", "message": "Implementing email validation with regex pattern"},
-                {"timestamp": "2024-02-14T15:33:10", "agent": "code", "message": "Adding type hints and docstrings"},
-            ]
-
-        render_logs(logs)
-
+        st.bar_chart(df.set_index("Agent"), color="#6366f1", height=200)
     with col2:
-        st.markdown("### 📊 Token Usage")
-
-        # Token usage by agent
-        token_data = tokens.get("by_agent", {"orca": 4200, "design": 3800, "code": 5120, "test": 2300})
-
-        import pandas as pd
-        df = pd.DataFrame({
-            "Agent": list(token_data.keys()),
-            "Tokens": list(token_data.values())
-        })
-
-        st.bar_chart(df.set_index("Agent"), color="#6366f1")
-
-        st.markdown("---")
         st.markdown("**Recent Activity**")
-
         history = tokens.get("history", [])[-5:]
         if history:
             for entry in reversed(history):
                 agent = entry.get("agent", "unknown")
                 toks = entry.get("tokens", 0)
-                st.markdown(f"🔹 **{agent.title()}**: +{toks} tokens")
+                st.markdown(f"🔹 **{agent.title()}**: +{toks}")
         else:
-            st.markdown("🔹 **Orca**: +320 tokens")
-            st.markdown("🔹 **Code**: +480 tokens")
-            st.markdown("🔹 **Design**: +250 tokens")
+            st.markdown("🔹 **Orca**: +320")
+            st.markdown("🔹 **Code**: +480")
+            st.markdown("🔹 **Design**: +250")
+
+    # === LIVE LOGS SECTION ===
+    st.markdown("### 📜 Live Logs")
+    logs = fetch_api("/api/logs", [])
+    if not logs:
+        logs = [
+            {"timestamp": "2024-02-14T15:30:42", "agent": "orca", "message": "Received task: Create email validation function"},
+            {"timestamp": "2024-02-14T15:30:43", "agent": "orca", "message": "task_id = 20240214-153042"},
+            {"timestamp": "2024-02-14T15:30:45", "agent": "orca", "message": "Calling DesignBot: ./bin/agent-cli.py --agent design api-spec ..."},
+            {"timestamp": "2024-02-14T15:31:02", "agent": "design", "message": "Analyzing requirements..."},
+            {"timestamp": "2024-02-14T15:32:15", "agent": "design", "message": "Output saved to artifacts/20240214-153042/design.md"},
+            {"timestamp": "2024-02-14T15:32:18", "agent": "orca", "message": "Quality gate passed → Calling CodeBot ..."},
+            {"timestamp": "2024-02-14T15:32:45", "agent": "code", "message": "Implementing email validation with regex pattern"},
+            {"timestamp": "2024-02-14T15:33:10", "agent": "code", "message": "Adding type hints and docstrings"},
+        ]
+    render_logs(logs)
 
 
 elif page == "agents":
