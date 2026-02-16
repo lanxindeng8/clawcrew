@@ -165,6 +165,121 @@ OrcaBot reviews all outputs and delivers to user:
 - `email_validator.py` — Implementation
 - `test_email_validator.py` — Tests
 
+---
+
+## Repo Mode Workflow (External Repositories)
+
+When working on an **existing GitHub repository**, use **Repo Mode**. Instead of creating standalone files, agents output **Unified Diff patches** that modify the existing codebase.
+
+### Two Workflow Modes
+
+| Mode | When to Use | Agent Output |
+|------|-------------|--------------|
+| **Standalone** | New code, no existing repo | Complete files (`main.py`, `test_main.py`) |
+| **Repo Mode** | Modifying existing repo | Unified Diff patches (`changes.patch`, `tests.patch`) |
+
+### Repo Mode Example
+
+**User Request:** "Add a caching layer to https://github.com/user/api-server"
+
+#### Step 1: Analyze Repository
+
+```bash
+# Clone and analyze (repo saved to artifacts/<task_id>/repo/)
+~/.openclaw/bin/agent-cli.py summarize-repo \
+  --url https://github.com/user/api-server \
+  --task-id 20240215-100000
+```
+
+**Output:** `repo_summary.md` with architecture overview
+
+#### Step 2: Read Relevant Files
+
+```bash
+# Extract files with line numbers for precise modifications
+~/.openclaw/bin/agent-cli.py read-files \
+  --repo-path ~/.openclaw/artifacts/20240215-100000/repo \
+  --files "src/api.py,src/models.py,tests/test_api.py" \
+  -o ~/.openclaw/artifacts/20240215-100000/repo_context.md
+```
+
+**Output:** `repo_context.md` with file contents and line numbers
+
+#### Step 3: Design (Repo Mode)
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design a caching layer for this codebase. Output in Repo Mode format." \
+  -c ~/.openclaw/artifacts/20240215-100000/repo_summary.md \
+  -c ~/.openclaw/artifacts/20240215-100000/repo_context.md \
+  -o ~/.openclaw/artifacts/20240215-100000/design.md
+```
+
+**Output:** `design.md` with modification plan (which files, which lines, what changes)
+
+#### Step 4: Code (Output Diff)
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a code \
+  -t "Implement the caching layer. Output as unified diff." \
+  -c ~/.openclaw/artifacts/20240215-100000/design.md \
+  -c ~/.openclaw/artifacts/20240215-100000/repo_context.md \
+  -o ~/.openclaw/artifacts/20240215-100000/changes.patch
+```
+
+**Output:** `changes.patch` in unified diff format
+
+#### Step 5: Test (Output Diff)
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a test \
+  -t "Add tests following repo patterns. Output as unified diff." \
+  -c ~/.openclaw/artifacts/20240215-100000/changes.patch \
+  -c ~/.openclaw/artifacts/20240215-100000/repo_context.md \
+  -o ~/.openclaw/artifacts/20240215-100000/tests.patch
+```
+
+**Output:** `tests.patch` in unified diff format
+
+#### Step 6: Apply Patches & Create PR
+
+```bash
+cd ~/.openclaw/artifacts/20240215-100000/repo
+
+# Verify patches apply cleanly
+git apply --check ../changes.patch
+git apply --check ../tests.patch
+
+# Apply patches
+git apply ../changes.patch
+git apply ../tests.patch
+
+# Create branch and commit
+git checkout -b feature-caching
+git add -A
+git commit -m "Add caching layer"
+
+# Create PR
+~/.openclaw/bin/agent-cli.py create-pr \
+  -r user/api-server \
+  -t "Add caching layer" \
+  -H feature-caching
+```
+
+### Repo Mode Artifacts
+
+```
+~/.openclaw/artifacts/<task_id>/
+├── repo/                 # Cloned repository
+├── repo_summary.md       # Architecture analysis
+├── repo_context.md       # File contents with line numbers
+├── design.md             # Modification plan
+├── changes.patch         # Code changes (unified diff)
+└── tests.patch           # Test changes (unified diff)
+```
+
+---
+
 ## Directory Structure
 
 ```
