@@ -18,6 +18,7 @@ Agents:
     code    - Software Engineer: Implementation, coding
     test    - QA Engineer: Testing, coverage, bug finding
     orca    - Orchestrator: Coordinates other agents (used by OrcaBot)
+    github  - GitHub Integration: Repo analysis, issues, PRs
 
 Memory System:
     Each agent stores lessons learned in memory/YYYY-MM-DD.md files.
@@ -66,7 +67,7 @@ AGENT_WORKSPACES = {
     "design": "workspace-design",
     "code": "workspace-code",
     "test": "workspace-test",
-    "repo": "workspace-repo",
+    "github": "workspace-github",
 }
 
 # =============================================================================
@@ -500,7 +501,7 @@ def summarize_repo(
             branch_info = f" (branch: {branch})" if branch else ""
             auth_info = " [authenticated]" if github_token else ""
             if verbose:
-                typer.echo(f"[REPO] Cloning {owner}/{repo_name}{branch_info}{auth_info}...")
+                typer.echo(f"[GITHUB] Cloning {owner}/{repo_name}{branch_info}{auth_info}...")
 
             # Create temp directory
             temp_dir = Path(tempfile.mkdtemp(prefix="clawcrew-repo-"))
@@ -519,7 +520,7 @@ def summarize_repo(
                 raise typer.Exit(1)
 
             if verbose:
-                typer.echo(f"[REPO] Cloned to: {repo_path}")
+                typer.echo(f"[GITHUB] Cloned to: {repo_path}")
 
         # Handle local path
         else:
@@ -533,22 +534,22 @@ def summarize_repo(
             repo_name = repo_path.name
 
             if verbose:
-                typer.echo(f"[REPO] Analyzing local directory: {repo_path}")
+                typer.echo(f"[GITHUB] Analyzing local directory: {repo_path}")
 
         # Find key files
         if verbose:
-            typer.echo("[REPO] Scanning for key files...")
+            typer.echo("[GITHUB] Scanning for key files...")
 
         key_files = find_key_files(repo_path)
 
         if verbose:
             for category, files in key_files.items():
                 if files:
-                    typer.echo(f"[REPO] Found {len(files)} {category} files")
+                    typer.echo(f"[GITHUB] Found {len(files)} {category} files")
 
         # Build context
         if verbose:
-            typer.echo("[REPO] Building analysis context...")
+            typer.echo("[GITHUB] Building analysis context...")
 
         context = build_repo_context(repo_path, key_files)
 
@@ -577,11 +578,11 @@ Format your analysis between these markers:
 ---END OUTPUT---
 """
 
-        # Call repo agent
+        # Call github agent
         if verbose:
-            typer.echo("[REPO] Calling repo agent for analysis...")
+            typer.echo("[GITHUB] Calling github agent for analysis...")
 
-        response = call_llm(prompt, "repo")
+        response = call_llm(prompt, "github")
         summary = extract_output(response)
 
         # Determine output path
@@ -596,8 +597,8 @@ Format your analysis between these markers:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(summary, encoding="utf-8")
 
-        typer.echo(f"[REPO] Summary saved to: {out_path}")
-        typer.echo(f"[REPO] Task {task_id} completed.")
+        typer.echo(f"[GITHUB] Summary saved to: {out_path}")
+        typer.echo(f"[GITHUB] Task {task_id} completed.")
 
         # Also print summary if no output file specified by user
         if not output:
@@ -608,7 +609,7 @@ Format your analysis between these markers:
         # Cleanup temp directory
         if temp_dir and temp_dir.exists() and not keep_clone:
             if verbose:
-                typer.echo(f"[REPO] Cleaning up: {temp_dir}")
+                typer.echo(f"[GITHUB] Cleaning up: {temp_dir}")
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 

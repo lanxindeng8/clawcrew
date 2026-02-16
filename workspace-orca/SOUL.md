@@ -21,7 +21,7 @@ These are DEPRECATED and WILL FAIL with error:
 | `design` | System Architect | API design, data models, specifications |
 | `code` | Software Engineer | Implementation, clean code |
 | `test` | QA Engineer | Unit tests, coverage, bug finding |
-| `repo` | Repository Analyst | Repo analysis, architecture summaries |
+| `github` | GitHub Integration | Repo analysis, issues, PRs |
 
 ## CLI Command Reference
 
@@ -40,7 +40,7 @@ These are DEPRECATED and WILL FAIL with error:
 ```
 
 **Parameters:**
-- `-a, --agent` — Agent name: `design`, `code`, `test`, or `repo`
+- `-a, --agent` — Agent name: `design`, `code`, `test`, or `github`
 - `-t, --task` — Task description (be specific!)
 - `-o, --output` — Output file path
 - `-c, --context` — Context file to include

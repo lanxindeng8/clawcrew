@@ -36,7 +36,7 @@ design.md      main.py      test_main.py
 | `design` | System Architect | workspace-design | API design, data models, specifications |
 | `code` | Software Engineer | workspace-code | Implementation, clean code, type hints |
 | `test` | QA Engineer | workspace-test | Unit tests, edge cases, coverage |
-| `repo` | Repository Analyst | workspace-repo | Repo analysis, architecture summaries, dependency mapping |
+| `github` | GitHub Integration | workspace-github | Repo analysis, issues, PRs, GitHub workflows |
 
 ## CLI Usage
 
@@ -91,217 +91,39 @@ design.md      main.py      test_main.py
 ~/.openclaw/bin/agent-cli.py clear-memory -a design --all
 ```
 
-## Repository Analysis
+## GitHub Integration
 
-Analyze GitHub repositories or local directories to understand their architecture.
+GitHubBot manages all GitHub-related workflows: repository analysis, issues, and pull requests.
 
-### Summarize a Repository
+### Quick Reference
 
-```bash
-~/.openclaw/bin/agent-cli.py summarize-repo --url https://github.com/user/repo
-```
+| Command | Description |
+|---------|-------------|
+| `summarize-repo` | Analyze repository structure and architecture |
+| `list-issues` | List GitHub issues |
+| `read-issue` | Read issue details with comments |
+| `create-pr` | Create a Pull Request |
+| `list-prs` | List Pull Requests |
+| `read-pr` | Read PR details with diff |
 
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-u` | `--url` | GitHub repository URL |
-| `-p` | `--path` | Local repository path |
-| `-b` | `--branch` | Specific branch to analyze |
-| | `--pat` | GitHub PAT for private repos (or set GITHUB_PAT env) |
-| `-o` | `--output` | Output file path |
-| `--task-id` | | Task ID for tracking |
-| `--keep-clone` | | Don't delete temp clone |
-| `-v` | `--verbose` | Show detailed output |
-
-### Examples
+### Example Workflow
 
 ```bash
-# Summarize GitHub repo
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  --url https://github.com/pallets/flask
-
-# Summarize a specific branch
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  -u https://github.com/user/repo \
-  -b develop
-
-# Summarize private repo (PAT via flag)
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  -u https://github.com/user/private-repo \
-  --pat ghp_xxxxxxxxxxxx
-
-# Summarize private repo (PAT via environment)
-export GITHUB_PAT=ghp_xxxxxxxxxxxx
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  -u https://github.com/user/private-repo
-
-# Summarize local project
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  --path ~/projects/my-app \
-  --output ~/notes/my-app-summary.md
-
-# With task tracking
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  -u https://github.com/user/repo \
-  --task-id 20240214-120000
-```
-
-### Output Location
-
-By default, summaries are saved to:
-```
-~/.openclaw/artifacts/<task_id>/repo_summary.md
-```
-
-### Using with Other Agents
-
-Pass repo summary as context for development tasks:
-
-```bash
-# First, analyze the repo
+# 1. Analyze the repo
 ~/.openclaw/bin/agent-cli.py summarize-repo \
   --url https://github.com/user/repo \
   --task-id task-001
 
-# Then, design a feature using the context
-~/.openclaw/bin/agent-cli.py run -a design \
-  -t "Design a caching middleware for this API" \
-  -c ~/.openclaw/artifacts/task-001/repo_summary.md \
-  -o ~/.openclaw/artifacts/task-001/design.md
-```
-
-## Issue Management
-
-Read and list GitHub issues to use as context for development tasks.
-Requires the `gh` CLI to be installed and authenticated.
-
-### List Issues
-
-```bash
-~/.openclaw/bin/agent-cli.py list-issues --repo user/repo
-```
-
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-r` | `--repo` | Repository (owner/repo format) |
-| `-s` | `--state` | Filter by state: open, closed, all (default: open) |
-| `-l` | `--label` | Filter by label |
-| `-n` | `--limit` | Number of issues to list (default: 10) |
-
-### Read Issue
-
-```bash
-~/.openclaw/bin/agent-cli.py read-issue --repo user/repo --issue 123
-```
-
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-r` | `--repo` | Repository (owner/repo format) |
-| `-n` | `--issue` | Issue number |
-| `-c` | `--comments` | Include issue comments |
-| `-o` | `--output` | Output file path |
-
-### Examples
-
-```bash
-# List open issues
-~/.openclaw/bin/agent-cli.py list-issues -r pallets/flask
-
-# List bugs only
-~/.openclaw/bin/agent-cli.py list-issues -r pallets/flask -l bug
-
-# Read specific issue with comments
-~/.openclaw/bin/agent-cli.py read-issue -r pallets/flask -n 5432 --comments
-
-# Save issue as context for agent
+# 2. Read an issue
 ~/.openclaw/bin/agent-cli.py read-issue -r user/repo -n 42 -o issue.md
-~/.openclaw/bin/agent-cli.py run -a design \
-  -t "Design a fix for this issue" \
-  -c issue.md \
-  -o fix_design.md
-```
 
-## Pull Request Management
-
-Create, list, and read GitHub Pull Requests.
-Requires the `gh` CLI to be installed and authenticated.
-
-### Create PR
-
-```bash
-~/.openclaw/bin/agent-cli.py create-pr --repo user/repo --title "Add feature" --head feature-branch
-```
-
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-r` | `--repo` | Repository (owner/repo format) |
-| `-t` | `--title` | PR title |
-| `-b` | `--body` | PR body/description |
-| `-f` | `--body-file` | File containing PR body |
-| `-H` | `--head` | Branch containing changes |
-| `-B` | `--base` | Branch to merge into (default: main) |
-| `-d` | `--draft` | Create as draft PR |
-
-### List PRs
-
-```bash
-~/.openclaw/bin/agent-cli.py list-prs --repo user/repo
-```
-
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-r` | `--repo` | Repository (owner/repo format) |
-| `-s` | `--state` | Filter by state: open, closed, merged, all |
-| `-n` | `--limit` | Number of PRs to list (default: 10) |
-
-### Read PR
-
-```bash
-~/.openclaw/bin/agent-cli.py read-pr --repo user/repo --pr 123
-```
-
-**Options:**
-| Flag | Long | Description |
-|------|------|-------------|
-| `-r` | `--repo` | Repository (owner/repo format) |
-| `-n` | `--pr` | PR number |
-| `-c` | `--comments` | Include PR comments |
-| `-d` | `--diff` | Include PR diff |
-| `-o` | `--output` | Output file path |
-
-### Examples
-
-```bash
-# Create a PR
-~/.openclaw/bin/agent-cli.py create-pr \
-  -r user/repo \
-  -t "Add email validation feature" \
-  -b "Implements email validation as per design spec" \
-  -H feature/email-validator
-
-# Create PR with description from file
-~/.openclaw/bin/agent-cli.py create-pr \
-  -r user/repo \
-  -t "Big feature" \
-  -f ~/.openclaw/artifacts/task-001/pr_description.md \
-  -H feature-branch
-
-# List open PRs
-~/.openclaw/bin/agent-cli.py list-prs -r pallets/flask
-
-# Read PR with diff
-~/.openclaw/bin/agent-cli.py read-pr -r user/repo -n 42 --diff
-
-# Full workflow: Issue -> Design -> Code -> PR
-~/.openclaw/bin/agent-cli.py read-issue -r user/repo -n 42 -o issue.md
-~/.openclaw/bin/agent-cli.py run -a design -t "Design fix for issue" -c issue.md -o design.md
+# 3. Design → Code → PR
+~/.openclaw/bin/agent-cli.py run -a design -t "Design fix" -c issue.md -o design.md
 ~/.openclaw/bin/agent-cli.py run -a code -t "Implement fix" -c design.md -o fix.py
-~/.openclaw/bin/agent-cli.py create-pr -r user/repo -t "Fix #42: Description" -H fix-branch
+~/.openclaw/bin/agent-cli.py create-pr -r user/repo -t "Fix #42" -H fix-branch
 ```
+
+**Full documentation:** See `workspace-github/SOUL.md` for complete command reference.
 
 ## Workflow Example
 
@@ -368,7 +190,7 @@ clawcrew/
 ├── workspace-test/       # Test agent
 │   ├── SOUL.md
 │   └── memory/
-├── workspace-repo/       # Repository analyst
+├── workspace-github/     # GitHub integration
 │   ├── SOUL.md
 │   └── memory/
 ├── setup.sh             # Installation script
@@ -411,7 +233,7 @@ sessions_spawn("design", ...)
 
 ### All Agents are Registered
 
-All 5 agents (orca, design, code, test, repo) are registered in OpenClaw. OrcaBot receives Telegram messages and orchestrates the others via CLI.
+All 5 agents (orca, design, code, test, github) are registered in OpenClaw. OrcaBot receives Telegram messages and orchestrates the others via CLI.
 
 ### Artifacts are Gitignored
 

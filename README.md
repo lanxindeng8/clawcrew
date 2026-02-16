@@ -265,118 +265,30 @@ Send a task and watch your custom team collaborate!
 
 ## 🔗 GitHub Integration
 
-ClawCrew includes built-in GitHub integration via the `agent-cli.py` tool, powered by the `github_utils.py` module.
+ClawCrew includes **GitHubBot** — a specialized agent for GitHub workflows.
 
-### Repository Analysis
+### Capabilities
 
-Analyze any GitHub repository or local directory to understand its architecture before development tasks.
+| Feature | Description |
+|---------|-------------|
+| **Repository Analysis** | Analyze repos to understand architecture, tech stack, and key files |
+| **Issue Management** | List and read GitHub issues for development context |
+| **PR Workflow** | Create, list, and read Pull Requests |
 
-```bash
-# Analyze a public GitHub repo
-./bin/agent-cli.py summarize-repo --url https://github.com/pallets/flask
-
-# Analyze a specific branch
-./bin/agent-cli.py summarize-repo -u https://github.com/user/repo -b develop
-
-# Analyze a private repo (with PAT)
-./bin/agent-cli.py summarize-repo -u https://github.com/user/private-repo --pat ghp_xxx
-
-# Or use environment variable
-export GITHUB_PAT=ghp_xxx
-./bin/agent-cli.py summarize-repo -u https://github.com/user/private-repo
-
-# Analyze local directory
-./bin/agent-cli.py summarize-repo --path ~/projects/my-app
-```
-
-**What it analyzes:**
-- 📁 File tree structure (depth-limited, skips noise like `node_modules`, `.git`)
-- 📄 Documentation (README, CONTRIBUTING, ARCHITECTURE)
-- ⚙️ Config files (package.json, pyproject.toml, Cargo.toml, etc.)
-- 🚀 Entry points (main.py, index.js, main.go, etc.)
-- 🔧 Core source files (from src/, lib/, pkg/, app/)
-
-### Issue Management
-
-Read and list GitHub issues to use as context for development tasks.
+### Quick Examples
 
 ```bash
-# List open issues
-./bin/agent-cli.py list-issues -r user/repo
+# Analyze a repo
+./bin/agent-cli.py summarize-repo --url https://github.com/user/repo
 
-# Filter by label
-./bin/agent-cli.py list-issues -r user/repo -l bug
+# Read an issue
+./bin/agent-cli.py read-issue -r user/repo -n 123 --comments
 
-# Read a specific issue with comments
-./bin/agent-cli.py read-issue -r user/repo -n 123 --comments -o issue.md
-```
-
-### Pull Request Workflow
-
-Create, list, and read PRs directly from the CLI.
-
-```bash
 # Create a PR
-./bin/agent-cli.py create-pr -r user/repo -t "Add feature X" -H feature-branch
-
-# List open PRs
-./bin/agent-cli.py list-prs -r user/repo
-
-# Read PR with diff
-./bin/agent-cli.py read-pr -r user/repo -n 42 --diff -o pr.md
+./bin/agent-cli.py create-pr -r user/repo -t "Fix bug" -H fix-branch
 ```
 
-### `github_utils.py` Module
-
-The underlying utility module provides:
-
-| Function | Description |
-|----------|-------------|
-| `get_github_token()` | Get PAT from `--pat` flag, `GITHUB_PAT`, or `GH_TOKEN` env |
-| `parse_github_url()` | Parse HTTPS/SSH GitHub URLs into (owner, repo, clone_url) |
-| `clone_repository()` | Shallow clone with branch and PAT support |
-| `generate_file_tree()` | ASCII tree representation with depth limit |
-| `find_key_files()` | Locate docs, configs, entry points, core files |
-| `read_file_safe()` | Read files with size limits (100KB default) |
-| `build_repo_context()` | Assemble full context for LLM analysis |
-
-**Configuration constants:**
-- `MAX_FILE_SIZE` = 100KB per file
-- `MAX_TOTAL_CONTENT` = 500KB total context
-- `MAX_TREE_DEPTH` = 4 levels
-- `MAX_FILES_PER_CATEGORY` = 5 files
-
-### Full Workflow Example
-
-```bash
-# 1. Analyze the target repo
-./bin/agent-cli.py summarize-repo \
-  --url https://github.com/user/repo \
-  --task-id task-001
-
-# 2. Read the issue to implement
-./bin/agent-cli.py read-issue -r user/repo -n 42 -o ~/.openclaw/artifacts/task-001/issue.md
-
-# 3. Design the solution using repo + issue context
-./bin/agent-cli.py run -a design \
-  -t "Design a fix for this issue" \
-  -c ~/.openclaw/artifacts/task-001/repo_summary.md \
-  -c ~/.openclaw/artifacts/task-001/issue.md \
-  -o ~/.openclaw/artifacts/task-001/design.md
-
-# 4. Implement the fix
-./bin/agent-cli.py run -a code \
-  -t "Implement the fix following the design" \
-  -c ~/.openclaw/artifacts/task-001/design.md \
-  -o ~/.openclaw/artifacts/task-001/fix.py
-
-# 5. Create a PR
-./bin/agent-cli.py create-pr \
-  -r user/repo \
-  -t "Fix #42: Issue title" \
-  -f ~/.openclaw/artifacts/task-001/design.md \
-  -H fix-branch
-```
+**Full documentation:** See [workspace-github/SOUL.md](workspace-github/SOUL.md) for complete command reference and workflow examples.
 
 ---
 
