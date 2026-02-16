@@ -843,21 +843,7 @@ with st.sidebar:
 page = st.session_state.page
 
 if page == "home":
-    # Top stats row only
-    stats = fetch_api("/api/stats", {})
-    tokens = fetch_api("/api/tokens", {})
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Tasks", stats.get("total_tasks", 3))
-    col2.metric("Agents Running", stats.get("agents_running", 2))
-    col3.metric("Total Tokens", format_tokens(tokens.get("total", 15420)))
-    col4.metric("Success Rate", "94%")
-
-    st.divider()
-
-    # Agent Team - Visual Focus
-
-    # Get agents with extended mock data
+    # Agent Team - Visual Focus (TOP)
     agents = fetch_api("/api/agents", [])
     if not agents:
         agents = [
@@ -913,25 +899,23 @@ if page == "home":
 
     render_agent_floor_native(agents)
 
-    # Current Task Section (below agent cards)
-    st.markdown("""
-    <div style="
-        background: white;
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    ">
-        <div style="display:flex;align-items:center;gap:1rem;">
-            <span style="font-size:1.5rem;">📋</span>
-            <div style="flex:1;">
-                <strong style="font-size:1rem;">Create email validation function</strong>
-                <div style="color:#64748b;font-size:0.8rem;">Task ID: 20240214-153042 • Started 5 min ago • Code phase</div>
-            </div>
+    # Current Task + Stats Row
+    stats = fetch_api("/api/stats", {})
+    tokens = fetch_api("/api/tokens", {})
+
+    col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
+    with col1:
+        st.markdown("""
+        <div style="background:white;border-radius:10px;padding:0.75rem 1rem;border:1px solid #e2e8f0;">
+            <strong>📋 Create email validation function</strong>
+            <span style="color:#64748b;font-size:0.8rem;margin-left:0.5rem;">Code phase</span>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    col2.metric("Tasks", stats.get("total_tasks", 3))
+    col3.metric("Running", stats.get("agents_running", 2))
+    col4.metric("Tokens", format_tokens(tokens.get("total", 15420)))
+    col5.metric("Success", "94%")
+
     st.progress(0.6, text="Orca → Design ✓ → Code (running) → Test")
 
     st.divider()
