@@ -613,36 +613,7 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
 def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
-    # Office floor container with background
-    st.markdown("""
-    <div style="
-        background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #f0f4f8 100%);
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        border: 1px solid #cbd5e1;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        position: relative;
-    ">
-        <div style="
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 4px 20px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        ">
-            🟢 Online  •  🟠 Running  •  🟡 Away  •  ⚪ Offline
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Agent cards in a 4-column grid
+    # Agent cards in a 4-column grid (no legend here - moved to top bar)
     cols = st.columns(4)
 
     for i, agent in enumerate(agents):
@@ -843,7 +814,37 @@ with st.sidebar:
 page = st.session_state.page
 
 if page == "home":
-    # Agent Team - Visual Focus (TOP)
+    # Top Bar: Stats (left) + Status Legend (right)
+    stats = fetch_api("/api/stats", {})
+    tokens = fetch_api("/api/tokens", {})
+
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1rem;
+    ">
+        <div style="display: flex; gap: 2rem; align-items: center;">
+            <div><span style="color:#64748b;font-size:0.75rem;">Tasks</span><br/><strong style="font-size:1.25rem;">{stats.get("total_tasks", 3)}</strong></div>
+            <div><span style="color:#64748b;font-size:0.75rem;">Running</span><br/><strong style="font-size:1.25rem;">{stats.get("agents_running", 2)}</strong></div>
+            <div><span style="color:#64748b;font-size:0.75rem;">Tokens</span><br/><strong style="font-size:1.25rem;">{format_tokens(tokens.get("total", 15420))}</strong></div>
+            <div><span style="color:#64748b;font-size:0.75rem;">Success</span><br/><strong style="font-size:1.25rem;">94%</strong></div>
+        </div>
+        <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #64748b;">
+            <span>🟢 Online</span>
+            <span>🟠 Running</span>
+            <span>🟡 Away</span>
+            <span>⚪ Offline</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Agent Team - Visual Focus
     agents = fetch_api("/api/agents", [])
     if not agents:
         agents = [
@@ -899,23 +900,13 @@ if page == "home":
 
     render_agent_floor_native(agents)
 
-    # Current Task + Stats Row
-    stats = fetch_api("/api/stats", {})
-    tokens = fetch_api("/api/tokens", {})
-
-    col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
-    with col1:
-        st.markdown("""
-        <div style="background:white;border-radius:10px;padding:0.75rem 1rem;border:1px solid #e2e8f0;">
-            <strong>📋 Create email validation function</strong>
-            <span style="color:#64748b;font-size:0.8rem;margin-left:0.5rem;">Code phase</span>
-        </div>
-        """, unsafe_allow_html=True)
-    col2.metric("Tasks", stats.get("total_tasks", 3))
-    col3.metric("Running", stats.get("agents_running", 2))
-    col4.metric("Tokens", format_tokens(tokens.get("total", 15420)))
-    col5.metric("Success", "94%")
-
+    # Current Task + Progress
+    st.markdown("""
+    <div style="background:white;border-radius:10px;padding:0.75rem 1rem;border:1px solid #e2e8f0;margin:0.5rem 0;">
+        <strong>📋 Create email validation function</strong>
+        <span style="color:#64748b;font-size:0.8rem;margin-left:0.5rem;">Task ID: 20240214-153042 • Code phase</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.progress(0.6, text="Orca → Design ✓ → Code (running) → Test")
 
     st.divider()
