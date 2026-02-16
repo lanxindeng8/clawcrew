@@ -176,17 +176,25 @@ STATUS_COLORS = {
 # COMPONENTS: Reusable UI components
 # ============================================================
 
-def status_dot(status: str, size: str = "12px") -> rx.Component:
+def status_dot(status, size: str = "12px") -> rx.Component:
     """Render a status indicator dot."""
-    color = STATUS_COLORS.get(status, STATUS_COLORS["offline"])
+    # Use rx.match for reactive status color mapping
+    color = rx.match(
+        status,
+        ("online", STATUS_COLORS["online"]),
+        ("working", STATUS_COLORS["working"]),
+        ("away", STATUS_COLORS["away"]),
+        ("error", STATUS_COLORS["error"]),
+        STATUS_COLORS["offline"],  # default
+    )
     return rx.el.div(
         style={
             "width": size,
             "height": size,
             "border_radius": "50%",
             "background": color,
-            "box_shadow": f"0 0 10px {color}80",
-            "animation": "pulse 1.5s infinite" if status == "working" else "none",
+            "box_shadow": rx.cond(status == "working", f"0 0 10px {STATUS_COLORS['working']}80", f"0 0 10px {STATUS_COLORS['offline']}80"),
+            "animation": rx.cond(status == "working", "pulse 1.5s infinite", "none"),
         }
     )
 
