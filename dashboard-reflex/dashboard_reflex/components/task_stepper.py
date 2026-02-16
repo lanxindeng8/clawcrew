@@ -233,6 +233,15 @@ def task_stepper() -> rx.Component:
             rx.el.div(
                 rx.hstack(
                     rx.el.div(
+                        rx.el.div(
+                            style={
+                                "height": "100%",
+                                "width": f"{DashboardState.current_task_progress}%",
+                                "background": f"linear-gradient(90deg, {COLORS['status_online']}, {COLORS['primary']})",
+                                "border_radius": "3px",
+                                "transition": "width 0.5s ease",
+                            }
+                        ),
                         style={
                             "width": "100px",
                             "height": "6px",
@@ -240,17 +249,6 @@ def task_stepper() -> rx.Component:
                             "border_radius": "3px",
                             "overflow": "hidden",
                         },
-                        children=[
-                            rx.el.div(
-                                style={
-                                    "height": "100%",
-                                    "width": f"{DashboardState.current_task_progress}%",
-                                    "background": f"linear-gradient(90deg, {COLORS['status_online']}, {COLORS['primary']})",
-                                    "border_radius": "3px",
-                                    "transition": "width 0.5s ease",
-                                }
-                            )
-                        ],
                     ),
                     rx.text(
                         f"{DashboardState.current_task_progress}%",
