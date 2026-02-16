@@ -370,5 +370,5 @@ def agent_drawer() -> rx.Component:
         ),
         direction="right",
         open=DashboardState.drawer_open,
-        on_open_change=lambda open: DashboardState.close_drawer() if not open else None,
+        on_open_change=DashboardState.set_drawer_open,
     )

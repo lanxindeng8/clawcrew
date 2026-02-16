@@ -313,6 +313,12 @@ class DashboardState(rx.State):
         self.drawer_open = False
         self.selected_agent_id = ""
 
+    def set_drawer_open(self, open: bool):
+        """Handle drawer open state change."""
+        if not open:
+            self.drawer_open = False
+            self.selected_agent_id = ""
+
     def toggle_log_filter(self, agent: str):
         """Toggle agent in log filter."""
         if agent in self.log_filter_agents:
