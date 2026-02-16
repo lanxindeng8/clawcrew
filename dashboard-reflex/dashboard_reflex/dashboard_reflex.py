@@ -1,0 +1,795 @@
+"""
+ClawCrew Dashboard - Reflex Implementation
+Virtual Office style monitoring dashboard for AI agent teams.
+"""
+
+import reflex as rx
+from typing import List, Dict, Any
+from datetime import datetime
+import asyncio
+
+
+# ============================================================
+# STATE: Application state management
+# ============================================================
+
+class Agent(rx.Base):
+    """Agent data model."""
+    name: str
+    emoji: str
+    role: str
+    status: str  # online, working, away, offline, error
+    model: str
+    tokens: int
+    tasks: int
+    current_task: str = ""
+    color: str = "#6366f1"
+
+
+class LogEntry(rx.Base):
+    """Log entry model."""
+    timestamp: str
+    agent: str
+    message: str
+    level: str = "info"
+
+
+class State(rx.State):
+    """Main application state."""
+
+    # Navigation
+    current_page: str = "home"
+
+    # Stats
+    total_tasks: int = 3
+    agents_running: int = 2
+    total_tokens: int = 15420
+    success_rate: str = "94%"
+
+    # Agents data
+    agents: List[Dict[str, Any]] = [
+        {
+            "name": "Orca",
+            "emoji": "🦑",
+            "role": "Orchestrator",
+            "status": "working",
+            "model": "claude-3-opus",
+            "tokens": 4200,
+            "tasks": 12,
+            "current_task": "Coordinating email validation task",
+            "color": "#6366f1",
+            "position": {"top": "20%", "left": "38%"},  # Center-ish
+        },
+        {
+            "name": "Design",
+            "emoji": "🎨",
+            "role": "Architect",
+            "status": "online",
+            "model": "claude-3-sonnet",
+            "tokens": 3800,
+            "tasks": 8,
+            "current_task": "",
+            "color": "#8b5cf6",
+            "position": {"top": "15%", "left": "10%"},  # Top-left
+        },
+        {
+            "name": "Code",
+            "emoji": "💻",
+            "role": "Engineer",
+            "status": "working",
+            "model": "claude-3-opus",
+            "tokens": 5120,
+            "tasks": 15,
+            "current_task": "Implementing email validation",
+            "color": "#3b82f6",
+            "position": {"top": "55%", "left": "65%"},  # Bottom-right
+        },
+        {
+            "name": "Test",
+            "emoji": "🧪",
+            "role": "QA Engineer",
+            "status": "online",
+            "model": "claude-3-sonnet",
+            "tokens": 2300,
+            "tasks": 6,
+            "current_task": "",
+            "color": "#10b981",
+            "position": {"top": "60%", "left": "15%"},  # Bottom-left
+        },
+    ]
+
+    # Logs
+    logs: List[Dict[str, str]] = [
+        {"timestamp": "15:33:10", "agent": "code", "message": "Adding type hints and docstrings"},
+        {"timestamp": "15:32:45", "agent": "code", "message": "Implementing email validation with regex"},
+        {"timestamp": "15:32:18", "agent": "orca", "message": "Quality gate passed → Calling CodeBot"},
+        {"timestamp": "15:32:15", "agent": "design", "message": "Output saved to artifacts/design.md"},
+        {"timestamp": "15:31:02", "agent": "design", "message": "Analyzing requirements..."},
+        {"timestamp": "15:30:45", "agent": "orca", "message": "Calling DesignBot..."},
+        {"timestamp": "15:30:42", "agent": "orca", "message": "Received task: Create email validation"},
+    ]
+
+    # Token usage per agent
+    token_usage: Dict[str, int] = {
+        "Orca": 4200,
+        "Design": 3800,
+        "Code": 5120,
+        "Test": 2300,
+    }
+
+    # Auto refresh
+    auto_refresh: bool = True
+    last_refresh: str = ""
+
+    def navigate(self, page: str):
+        """Navigate to a page."""
+        self.current_page = page
+
+    def toggle_refresh(self):
+        """Toggle auto-refresh."""
+        self.auto_refresh = not self.auto_refresh
+
+    def refresh_data(self):
+        """Refresh dashboard data."""
+        self.last_refresh = datetime.now().strftime("%H:%M:%S")
+        # In production: fetch from API
+
+    def format_tokens(self, n: int) -> str:
+        """Format token count."""
+        if n >= 1_000_000:
+            return f"{n/1_000_000:.1f}M"
+        elif n >= 1_000:
+            return f"{n/1_000:.1f}K"
+        return str(n)
+
+
+# ============================================================
+# STYLES: CSS and Tailwind classes
+# ============================================================
+
+# Color scheme
+COLORS = {
+    "bg": "#f8fafc",
+    "card": "#ffffff",
+    "border": "#e2e8f0",
+    "text": "#1e293b",
+    "text_secondary": "#64748b",
+    "accent_indigo": "#6366f1",
+    "accent_purple": "#8b5cf6",
+    "accent_blue": "#3b82f6",
+    "accent_green": "#10b981",
+    "accent_orange": "#f97316",
+    "accent_red": "#ef4444",
+}
+
+# Status colors
+STATUS_COLORS = {
+    "online": "#22c55e",
+    "working": "#f97316",
+    "away": "#eab308",
+    "offline": "#94a3b8",
+    "error": "#ef4444",
+}
+
+
+# ============================================================
+# COMPONENTS: Reusable UI components
+# ============================================================
+
+def status_dot(status: str, size: str = "12px") -> rx.Component:
+    """Render a status indicator dot."""
+    color = STATUS_COLORS.get(status, STATUS_COLORS["offline"])
+    return rx.el.div(
+        style={
+            "width": size,
+            "height": size,
+            "border_radius": "50%",
+            "background": color,
+            "box_shadow": f"0 0 10px {color}80",
+            "animation": "pulse 1.5s infinite" if status == "working" else "none",
+        }
+    )
+
+
+def stat_item(label: str, value: str) -> rx.Component:
+    """Render a stat item."""
+    return rx.hstack(
+        rx.text(f"{label}:", color=COLORS["text_secondary"], font_size="0.85rem"),
+        rx.text(value, font_weight="bold", font_size="0.95rem"),
+        spacing="1",
+    )
+
+
+def nav_button(icon: str, label: str, page: str, is_active: bool) -> rx.Component:
+    """Render a navigation button."""
+    return rx.button(
+        rx.hstack(
+            rx.text(icon, font_size="1.1rem"),
+            rx.text(label),
+            spacing="2",
+            width="100%",
+        ),
+        width="100%",
+        padding="0.75rem 1rem",
+        border_radius="8px",
+        background=COLORS["accent_indigo"] if is_active else "transparent",
+        color="white" if is_active else COLORS["text"],
+        _hover={"background": COLORS["accent_indigo"] + "20"},
+        on_click=State.navigate(page),
+        cursor="pointer",
+    )
+
+
+# ============================================================
+# AGENT CARD: Virtual Office workstation card
+# ============================================================
+
+def agent_card(agent: Dict[str, Any]) -> rx.Component:
+    """Render an agent workstation card with absolute positioning."""
+    status = agent.get("status", "offline")
+    color = agent.get("color", COLORS["accent_indigo"])
+    is_lead = agent.get("name", "").lower() == "orca"
+    position = agent.get("position", {"top": "50%", "left": "50%"})
+
+    status_labels = {
+        "online": "Online",
+        "working": "Working",
+        "away": "Away",
+        "offline": "Offline",
+        "error": "Error",
+    }
+    status_icons = {
+        "online": "🟢",
+        "working": "🟠",
+        "away": "🟡",
+        "offline": "⚪",
+        "error": "🔴",
+    }
+
+    return rx.el.div(
+        # Desktop icon (top-right)
+        rx.el.div(
+            "🖥️",
+            style={
+                "position": "absolute",
+                "top": "-10px",
+                "right": "10px",
+                "font_size": "1.3rem",
+                "background": "white",
+                "padding": "2px 6px",
+                "border_radius": "8px",
+                "box_shadow": "0 2px 8px rgba(0,0,0,0.1)",
+            }
+        ),
+        # Lead badge (if Orca)
+        rx.cond(
+            is_lead,
+            rx.el.div(
+                "👑 LEAD",
+                style={
+                    "position": "absolute",
+                    "top": "-10px",
+                    "left": "10px",
+                    "background": "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                    "color": "white",
+                    "padding": "3px 10px",
+                    "border_radius": "10px",
+                    "font_size": "0.65rem",
+                    "font_weight": "700",
+                }
+            ),
+            rx.fragment(),
+        ),
+        # Status light (top-left inside)
+        rx.el.div(
+            style={
+                "position": "absolute",
+                "top": "12px",
+                "left": "12px",
+                "width": "14px",
+                "height": "14px",
+                "border_radius": "50%",
+                "background": STATUS_COLORS.get(status, "#94a3b8"),
+                "box_shadow": f"0 0 12px {STATUS_COLORS.get(status, '#94a3b8')}80",
+            }
+        ),
+        # Avatar
+        rx.el.div(
+            agent.get("emoji", "🤖"),
+            style={
+                "width": "70px",
+                "height": "70px",
+                "margin": "0.5rem auto",
+                "background": "linear-gradient(145deg, #fff, #f1f5f9)",
+                "border_radius": "50%",
+                "display": "flex",
+                "align_items": "center",
+                "justify_content": "center",
+                "font_size": "2.2rem",
+                "border": f"3px solid {color}",
+                "box_shadow": "0 4px 15px rgba(0,0,0,0.1)",
+            }
+        ),
+        # Name
+        rx.el.h4(
+            agent.get("name", "Agent"),
+            style={
+                "text_align": "center",
+                "margin": "0.4rem 0 0.2rem",
+                "font_size": "1rem",
+                "color": COLORS["text"],
+            }
+        ),
+        # Role
+        rx.el.p(
+            agent.get("role", ""),
+            style={
+                "text_align": "center",
+                "color": COLORS["text_secondary"],
+                "font_size": "0.75rem",
+                "margin": "0 0 0.5rem",
+            }
+        ),
+        # Status badge
+        rx.el.div(
+            rx.hstack(
+                rx.text(status_icons.get(status, "⚪")),
+                rx.text(status_labels.get(status, status.title())),
+                spacing="1",
+            ),
+            style={
+                "text_align": "center",
+                "margin": "0.5rem auto",
+                "padding": "4px 12px",
+                "background": f"{STATUS_COLORS.get(status, '#94a3b8')}20",
+                "border_radius": "15px",
+                "font_size": "0.75rem",
+                "font_weight": "600",
+                "width": "fit-content",
+            }
+        ),
+        # Stats
+        rx.el.div(
+            rx.vstack(
+                rx.hstack(
+                    rx.text("📊 Tokens", color=COLORS["text_secondary"], font_size="0.7rem"),
+                    rx.text(f"{agent.get('tokens', 0):,}", font_weight="600", font_size="0.7rem"),
+                    justify="between",
+                    width="100%",
+                ),
+                rx.hstack(
+                    rx.text("📋 Tasks", color=COLORS["text_secondary"], font_size="0.7rem"),
+                    rx.text(str(agent.get("tasks", 0)), font_weight="600", font_size="0.7rem"),
+                    justify="between",
+                    width="100%",
+                ),
+                spacing="1",
+                width="100%",
+            ),
+            style={
+                "background": "#f8fafc",
+                "border_radius": "8px",
+                "padding": "8px",
+                "margin_top": "8px",
+            }
+        ),
+        # Current task (if any)
+        rx.cond(
+            agent.get("current_task", "") != "",
+            rx.el.div(
+                f"💬 {agent.get('current_task', '')[:30]}...",
+                style={
+                    "background": f"{color}10",
+                    "border_radius": "8px",
+                    "padding": "6px 10px",
+                    "margin_top": "8px",
+                    "font_size": "0.7rem",
+                    "border_left": f"3px solid {color}",
+                    "color": COLORS["text_secondary"],
+                }
+            ),
+            rx.fragment(),
+        ),
+        # Card container styles
+        style={
+            "position": "absolute",
+            "top": position.get("top", "50%"),
+            "left": position.get("left", "50%"),
+            "width": "200px",
+            "background": "rgba(255,255,255,0.95)",
+            "backdrop_filter": "blur(10px)",
+            "border_radius": "16px",
+            "padding": "1rem",
+            "border": f"2px solid {color}40",
+            "box_shadow": "0 8px 30px rgba(0,0,0,0.12)",
+            "transition": "all 0.3s ease",
+            "z_index": "10",
+            "_hover": {
+                "transform": "translateY(-5px) scale(1.02)",
+                "box_shadow": "0 15px 40px rgba(0,0,0,0.15)",
+            }
+        }
+    )
+
+
+# ============================================================
+# VIRTUAL OFFICE: Main agents area with office background
+# ============================================================
+
+def virtual_office() -> rx.Component:
+    """Render the Virtual Office agents area."""
+    return rx.el.div(
+        # Office title badge
+        rx.el.div(
+            rx.hstack(
+                rx.text("🏢", font_size="1.1rem"),
+                rx.text("VIRTUAL OFFICE", font_weight="700", letter_spacing="1px"),
+                spacing="2",
+            ),
+            style={
+                "position": "absolute",
+                "top": "-15px",
+                "left": "50%",
+                "transform": "translateX(-50%)",
+                "background": "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                "color": "white",
+                "padding": "8px 24px",
+                "border_radius": "25px",
+                "font_size": "0.8rem",
+                "box_shadow": "0 4px 15px rgba(99,102,241,0.4)",
+                "z_index": "20",
+            }
+        ),
+        # Workflow arrows (center)
+        rx.el.div(
+            rx.hstack(
+                rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+                rx.text("→", color="#6366f1", font_weight="bold", font_size="1.2rem"),
+                rx.el.span("🎨 Design", style={"background": "#8b5cf6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+                rx.text("→", color="#8b5cf6", font_weight="bold", font_size="1.2rem"),
+                rx.el.span("💻 Code", style={"background": "#3b82f6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+                rx.text("→", color="#3b82f6", font_weight="bold", font_size="1.2rem"),
+                rx.el.span("🧪 Test", style={"background": "#10b981", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+                spacing="2",
+                justify="center",
+            ),
+            style={
+                "position": "absolute",
+                "top": "30px",
+                "left": "50%",
+                "transform": "translateX(-50%)",
+                "z_index": "15",
+            }
+        ),
+        # Agent cards (absolutely positioned)
+        rx.foreach(
+            State.agents,
+            agent_card,
+        ),
+        # Container styles with office background
+        style={
+            "position": "relative",
+            "width": "100%",
+            "height": "500px",
+            "background": """
+                linear-gradient(135deg, rgba(248,250,252,0.92) 0%, rgba(241,245,249,0.92) 100%),
+                url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80')
+            """,
+            "background_size": "cover",
+            "background_position": "center",
+            "border_radius": "20px",
+            "border": "1px solid #e2e8f0",
+            "box_shadow": "0 10px 40px rgba(0,0,0,0.08)",
+            "margin": "1rem 0",
+            "overflow": "visible",
+        }
+    )
+
+
+# ============================================================
+# SIDEBAR: Navigation sidebar
+# ============================================================
+
+def sidebar() -> rx.Component:
+    """Render the sidebar."""
+    return rx.el.aside(
+        rx.vstack(
+            # Logo
+            rx.hstack(
+                rx.text("🦞", font_size="2rem"),
+                rx.vstack(
+                    rx.heading("ClawCrew", size="5", margin="0"),
+                    rx.text("Agent Dashboard", font_size="0.75rem", color=COLORS["text_secondary"]),
+                    spacing="0",
+                    align="start",
+                ),
+                spacing="3",
+                padding="1rem",
+            ),
+            rx.divider(),
+            # Navigation
+            rx.vstack(
+                rx.text("Navigation", font_size="0.75rem", color=COLORS["text_secondary"], padding_left="1rem"),
+                nav_button("🏠", "Home", "home", State.current_page == "home"),
+                nav_button("🤖", "Agents", "agents", State.current_page == "agents"),
+                nav_button("📁", "Artifacts", "artifacts", State.current_page == "artifacts"),
+                nav_button("📋", "Logs", "logs", State.current_page == "logs"),
+                nav_button("⚙️", "Settings", "settings", State.current_page == "settings"),
+                spacing="1",
+                width="100%",
+                padding="0.5rem",
+            ),
+            rx.divider(),
+            # Agent list
+            rx.vstack(
+                rx.text("Agents", font_size="0.75rem", color=COLORS["text_secondary"], padding_left="1rem"),
+                rx.foreach(
+                    State.agents,
+                    lambda a: rx.hstack(
+                        rx.text(a["emoji"], font_size="1.2rem"),
+                        rx.vstack(
+                            rx.text(a["name"], font_weight="600", font_size="0.85rem"),
+                            rx.text(a["role"], font_size="0.7rem", color=COLORS["text_secondary"]),
+                            spacing="0",
+                            align="start",
+                        ),
+                        status_dot(a["status"]),
+                        spacing="2",
+                        width="100%",
+                        padding="0.5rem 1rem",
+                        border_radius="8px",
+                        _hover={"background": "#f1f5f9"},
+                    ),
+                ),
+                spacing="1",
+                width="100%",
+            ),
+            rx.spacer(),
+            # Refresh controls
+            rx.vstack(
+                rx.hstack(
+                    rx.text("Auto-refresh", font_size="0.85rem"),
+                    rx.switch(
+                        checked=State.auto_refresh,
+                        on_change=State.toggle_refresh,
+                    ),
+                    justify="between",
+                    width="100%",
+                    padding="0 1rem",
+                ),
+                rx.button(
+                    rx.hstack(rx.text("🔄"), rx.text("Refresh Now"), spacing="2"),
+                    width="90%",
+                    on_click=State.refresh_data,
+                ),
+                spacing="2",
+                padding="1rem 0",
+            ),
+            spacing="2",
+            width="100%",
+            height="100vh",
+        ),
+        style={
+            "width": "260px",
+            "background": COLORS["card"],
+            "border_right": f"1px solid {COLORS['border']}",
+            "position": "fixed",
+            "left": "0",
+            "top": "0",
+            "height": "100vh",
+            "overflow_y": "auto",
+        }
+    )
+
+
+# ============================================================
+# TOP BAR: Stats and status legend
+# ============================================================
+
+def top_bar() -> rx.Component:
+    """Render the top stats bar."""
+    return rx.hstack(
+        # Stats (left)
+        rx.hstack(
+            stat_item("Tasks", State.total_tasks.to_string()),
+            stat_item("Running", State.agents_running.to_string()),
+            stat_item("Tokens", "15.4K"),
+            stat_item("Success", State.success_rate),
+            spacing="6",
+        ),
+        rx.spacer(),
+        # Status legend (right)
+        rx.hstack(
+            rx.hstack(rx.text("🟢"), rx.text("Online", font_size="0.8rem", color=COLORS["text_secondary"]), spacing="1"),
+            rx.hstack(rx.text("🟠"), rx.text("Working", font_size="0.8rem", color=COLORS["text_secondary"]), spacing="1"),
+            rx.hstack(rx.text("🟡"), rx.text("Away", font_size="0.8rem", color=COLORS["text_secondary"]), spacing="1"),
+            rx.hstack(rx.text("⚪"), rx.text("Offline", font_size="0.8rem", color=COLORS["text_secondary"]), spacing="1"),
+            spacing="4",
+        ),
+        width="100%",
+        padding="0.75rem 1.5rem",
+        background=COLORS["card"],
+        border_radius="12px",
+        border=f"1px solid {COLORS['border']}",
+        margin_bottom="1rem",
+    )
+
+
+# ============================================================
+# LOGS SECTION
+# ============================================================
+
+def logs_section() -> rx.Component:
+    """Render the logs section."""
+    agent_colors = {
+        "orca": "#6366f1",
+        "design": "#8b5cf6",
+        "code": "#3b82f6",
+        "test": "#10b981",
+    }
+
+    return rx.vstack(
+        rx.heading("📜 Live Logs", size="4"),
+        rx.el.div(
+            rx.foreach(
+                State.logs,
+                lambda log: rx.hstack(
+                    rx.text(log["timestamp"], color="#64748b", font_size="0.8rem", font_family="monospace"),
+                    rx.text(f"[{log['agent']}]", color=agent_colors.get(log["agent"], "#64748b"), font_weight="600", font_size="0.8rem"),
+                    rx.text(log["message"], font_size="0.8rem"),
+                    spacing="2",
+                    padding="0.4rem 0",
+                    border_bottom="1px solid #334155",
+                ),
+            ),
+            style={
+                "background": "#1e293b",
+                "border_radius": "12px",
+                "padding": "1rem",
+                "max_height": "300px",
+                "overflow_y": "auto",
+                "color": "#e2e8f0",
+                "font_family": "monospace",
+            }
+        ),
+        spacing="3",
+        width="100%",
+        align="start",
+    )
+
+
+# ============================================================
+# MAIN PAGE: Home dashboard
+# ============================================================
+
+def home_page() -> rx.Component:
+    """Render the home page."""
+    return rx.vstack(
+        # Top stats bar
+        top_bar(),
+        # Virtual Office (agents area)
+        virtual_office(),
+        rx.divider(),
+        # Tasks section
+        rx.vstack(
+            rx.heading("📋 Tasks", size="4"),
+            rx.el.div(
+                rx.hstack(
+                    rx.text("Create email validation function", font_weight="600"),
+                    rx.text("ID: 20240214-153042 • Code phase", color=COLORS["text_secondary"], font_size="0.85rem"),
+                    spacing="3",
+                ),
+                style={
+                    "background": COLORS["card"],
+                    "border_radius": "10px",
+                    "padding": "0.75rem 1rem",
+                    "border": f"1px solid {COLORS['border']}",
+                }
+            ),
+            rx.progress(value=60),
+            rx.text("Orca → Design ✓ → Code (working) → Test", font_size="0.85rem", color=COLORS["text_secondary"]),
+            spacing="2",
+            width="100%",
+            align="start",
+        ),
+        rx.divider(),
+        # Token usage & Logs
+        rx.hstack(
+            # Token chart placeholder
+            rx.vstack(
+                rx.heading("📊 Token Usage", size="4"),
+                rx.el.div(
+                    rx.foreach(
+                        State.agents,
+                        lambda a: rx.hstack(
+                            rx.text(a["emoji"]),
+                            rx.text(a["name"], width="80px"),
+                            rx.el.div(
+                                style={
+                                    "height": "20px",
+                                    "width": f"{a['tokens'] / 60}px",
+                                    "background": a["color"],
+                                    "border_radius": "4px",
+                                }
+                            ),
+                            rx.text(f"{a['tokens']:,}", font_size="0.8rem"),
+                            spacing="2",
+                            align="center",
+                        ),
+                    ),
+                    style={
+                        "background": "#f8fafc",
+                        "border_radius": "10px",
+                        "padding": "1rem",
+                    }
+                ),
+                spacing="3",
+                width="60%",
+                align="start",
+            ),
+            # Logs
+            rx.box(logs_section(), width="40%"),
+            spacing="4",
+            width="100%",
+        ),
+        spacing="4",
+        width="100%",
+        padding="1rem",
+    )
+
+
+# ============================================================
+# APP: Main application
+# ============================================================
+
+def index() -> rx.Component:
+    """Main app layout."""
+    return rx.hstack(
+        sidebar(),
+        rx.el.main(
+            rx.cond(
+                State.current_page == "home",
+                home_page(),
+                rx.center(
+                    rx.vstack(
+                        rx.heading(f"📄 {State.current_page.to(str).upper()}", size="5"),
+                        rx.text("Page content coming soon...", color=COLORS["text_secondary"]),
+                        spacing="4",
+                    ),
+                    height="400px",
+                ),
+            ),
+            style={
+                "margin_left": "260px",
+                "padding": "1.5rem",
+                "min_height": "100vh",
+                "background": COLORS["bg"],
+            }
+        ),
+        spacing="0",
+        width="100%",
+    )
+
+
+# Custom CSS for animations
+custom_css = """
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.progress-gradient > div {
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 25%, #3b82f6 50%, #10b981 100%) !important;
+}
+"""
+
+# App configuration
+app = rx.App(
+    style={
+        "font_family": "Inter, system-ui, sans-serif",
+    },
+    stylesheets=[
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+    ],
+)
+app.add_page(index, title="ClawCrew Dashboard")
