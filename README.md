@@ -16,7 +16,11 @@ ClawCrew is a **framework** for creating multi-agent teams that collaborate on t
 
 **Watch them work in real-time — right in your chat.**
 
-![ClawCrew Dashboard](docs/images/dashboard_dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dashboard_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/dashboard_light.png">
+  <img alt="ClawCrew Dashboard" src="docs/images/dashboard_dark.png">
+</picture>
 
 ---
 
