@@ -200,7 +200,7 @@ def stat_item(label: str, value: str) -> rx.Component:
     )
 
 
-def nav_button(icon: str, label: str, page: str, is_active: bool) -> rx.Component:
+def nav_button(icon: str, label: str, page: str, is_active) -> rx.Component:
     """Render a navigation button."""
     return rx.button(
         rx.hstack(
@@ -212,8 +212,8 @@ def nav_button(icon: str, label: str, page: str, is_active: bool) -> rx.Componen
         width="100%",
         padding="0.75rem 1rem",
         border_radius="8px",
-        background=COLORS["accent_indigo"] if is_active else "transparent",
-        color="white" if is_active else COLORS["text"],
+        background=rx.cond(is_active, COLORS["accent_indigo"], "transparent"),
+        color=rx.cond(is_active, "white", COLORS["text"]),
         _hover={"background": COLORS["accent_indigo"] + "20"},
         on_click=State.navigate(page),
         cursor="pointer",
