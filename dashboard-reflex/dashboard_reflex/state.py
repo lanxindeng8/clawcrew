@@ -4,16 +4,17 @@ Centralized application state with dark mode, drawer, filters, and auto-refresh.
 """
 
 import reflex as rx
+from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
 import asyncio
 
 
 # ============================================================
-# DATA MODELS
+# DATA MODELS (using pydantic.BaseModel)
 # ============================================================
 
-class Agent(rx.Base):
+class Agent(BaseModel):
     """Agent data model with detailed information."""
     id: str
     name: str
@@ -26,11 +27,11 @@ class Agent(rx.Base):
     current_task: str = ""
     color: str = "#7B4CFF"
     soul_summary: str = ""
-    recent_outputs: List[str] = []
-    token_history: List[int] = []  # Last 10 token readings
+    recent_outputs: List[str] = Field(default_factory=list)
+    token_history: List[int] = Field(default_factory=list)  # Last 10 token readings
 
 
-class LogEntry(rx.Base):
+class LogEntry(BaseModel):
     """Log entry with agent and level."""
     id: str
     timestamp: str
@@ -39,7 +40,7 @@ class LogEntry(rx.Base):
     level: str = "info"  # info, warning, error, success
 
 
-class TaskStep(rx.Base):
+class TaskStep(BaseModel):
     """Task pipeline step."""
     name: str
     agent: str

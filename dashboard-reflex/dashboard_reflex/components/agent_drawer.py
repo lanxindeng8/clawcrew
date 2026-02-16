@@ -28,7 +28,12 @@ def mini_trend_chart(data: list, color: str) -> rx.Component:
                 stroke_width="1",
                 stroke_dasharray="4,4",
             ),
-            # Trend line placeholder (will be computed)
+            # Fill area (solid color with opacity)
+            rx.el.path(
+                d="M 4 30 L 16 28 L 28 22 L 40 25 L 52 20 L 64 18 L 76 22 L 88 15 L 100 18 L 112 12 L 112 40 L 4 40 Z",
+                fill=f"{color}25",
+            ),
+            # Trend line
             rx.el.path(
                 d="M 4 30 L 16 28 L 28 22 L 40 25 L 52 20 L 64 18 L 76 22 L 88 15 L 100 18 L 112 12",
                 fill="none",
@@ -36,19 +41,6 @@ def mini_trend_chart(data: list, color: str) -> rx.Component:
                 stroke_width="2",
                 stroke_linecap="round",
                 stroke_linejoin="round",
-            ),
-            # Gradient fill under line
-            rx.el.defs(
-                rx.el.linearGradient(
-                    rx.el.stop(offset="0%", stop_color=color, stop_opacity="0.3"),
-                    rx.el.stop(offset="100%", stop_color=color, stop_opacity="0"),
-                    id="trend-gradient",
-                    x1="0", y1="0", x2="0", y2="1",
-                ),
-            ),
-            rx.el.path(
-                d="M 4 30 L 16 28 L 28 22 L 40 25 L 52 20 L 64 18 L 76 22 L 88 15 L 100 18 L 112 12 L 112 40 L 4 40 Z",
-                fill="url(#trend-gradient)",
             ),
             width=str(width),
             height=str(height),

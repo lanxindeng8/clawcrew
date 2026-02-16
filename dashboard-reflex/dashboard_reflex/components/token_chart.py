@@ -222,20 +222,10 @@ def token_trend_chart() -> rx.Component:
             rx.el.line(x1="20", y1="50", x2="280", y2="50", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
             rx.el.line(x1="20", y1="80", x2="280", y2="80", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
 
-            # Gradient definition
-            rx.el.defs(
-                rx.el.linearGradient(
-                    rx.el.stop(offset="0%", stop_color=COLORS["primary"], stop_opacity="0.4"),
-                    rx.el.stop(offset="100%", stop_color=COLORS["primary"], stop_opacity="0"),
-                    id="trend-fill",
-                    x1="0", y1="0", x2="0", y2="1",
-                ),
-            ),
-
-            # Fill area
+            # Fill area (solid color with opacity)
             rx.el.polygon(
                 points=f"20,100 {points} 280,100",
-                fill="url(#trend-fill)",
+                fill=f"{COLORS['primary']}30",
             ),
 
             # Line
