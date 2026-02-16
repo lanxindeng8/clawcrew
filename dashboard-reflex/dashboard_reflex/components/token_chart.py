@@ -1,6 +1,7 @@
 """
 Token Chart Components
 Ring chart for usage breakdown + trend line for history.
+Light/dark mode support.
 """
 
 import reflex as rx
@@ -124,7 +125,11 @@ def token_ring_chart() -> rx.Component:
                         DashboardState.total_tokens_formatted,
                         font_size="2rem",
                         font_weight="700",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                         line_height="1",
                     ),
                     rx.text(
@@ -165,13 +170,21 @@ def token_ring_chart() -> rx.Component:
                     rx.text(
                         agent.name,
                         font_size="0.75rem",
-                        color=COLORS["text_secondary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_secondary"],
+                            "#475569",
+                        ),
                     ),
                     rx.text(
                         agent.tokens,
                         font_size="0.75rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
                     spacing="2",
                     align="center",
@@ -186,10 +199,18 @@ def token_ring_chart() -> rx.Component:
         ),
 
         style={
-            "background": "rgba(18, 18, 28, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(18, 18, 28, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1.5rem",
             "display": "flex",
             "flex_direction": "column",
@@ -264,7 +285,11 @@ def token_trend_chart() -> rx.Component:
                 style={
                     "width": "1px",
                     "height": "30px",
-                    "background": COLORS["border_subtle"],
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["border_subtle"],
+                        "rgba(0, 0, 0, 0.08)",
+                    ),
                 }
             ),
             rx.el.div(
@@ -273,7 +298,11 @@ def token_trend_chart() -> rx.Component:
                     "1,847",
                     font_size="1rem",
                     font_weight="700",
-                    color=COLORS["text_primary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                 ),
                 text_align="center",
             ),
@@ -281,7 +310,11 @@ def token_trend_chart() -> rx.Component:
                 style={
                     "width": "1px",
                     "height": "30px",
-                    "background": COLORS["border_subtle"],
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["border_subtle"],
+                        "rgba(0, 0, 0, 0.08)",
+                    ),
                 }
             ),
             rx.el.div(
@@ -298,14 +331,26 @@ def token_trend_chart() -> rx.Component:
             width="100%",
             margin_top="1rem",
             padding_top="1rem",
-            border_top=f"1px solid {COLORS['border_subtle']}",
+            border_top=rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
         ),
 
         style={
-            "background": "rgba(18, 18, 28, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(18, 18, 28, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1.5rem",
         }
     )
@@ -334,7 +379,11 @@ def token_usage_section() -> rx.Component:
                     "Token Usage",
                     font_size="0.95rem",
                     font_weight="600",
-                    color=COLORS["text_primary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                 ),
                 rx.text(
                     "Real-time consumption",

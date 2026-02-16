@@ -149,8 +149,16 @@ def right_panel() -> rx.Component:
         style={
             "width": "380px",
             "height": "100vh",
-            "background": "linear-gradient(180deg, rgba(10,10,22,0.98) 0%, rgba(6,6,14,0.99) 100%)",
-            "border_left": f"1px solid {COLORS['border_subtle']}",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "linear-gradient(180deg, rgba(10,10,22,0.98) 0%, rgba(6,6,14,0.99) 100%)",
+                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.99) 100%)",
+            ),
+            "border_left": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "backdrop_filter": "blur(30px)",
             "display": "flex",
             "flex_direction": "column",
@@ -158,7 +166,7 @@ def right_panel() -> rx.Component:
             "right": "0",
             "top": "0",
             "z_index": "50",
-            "transition": "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "transition": "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease",
             "transform": rx.cond(
                 DashboardState.right_panel_collapsed,
                 "translateX(100%)",
@@ -452,9 +460,13 @@ def index() -> rx.Component:
                 "margin_left": rx.cond(DashboardState.sidebar_collapsed, "80px", "280px"),
                 "margin_right": rx.cond(DashboardState.right_panel_collapsed, "0px", "380px"),
                 "min_height": "100vh",
-                "background": f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #12121C 50%, #0A0A14 100%)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    f"linear-gradient(135deg, {COLORS['bg_dark']} 0%, #12121C 50%, #0A0A14 100%)",
+                    "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)",
+                ),
                 "padding": "2rem",
-                "transition": "margin-left 0.3s ease, margin-right 0.3s ease",
+                "transition": "margin-left 0.3s ease, margin-right 0.3s ease, background 0.3s ease",
             }
         ),
 
@@ -470,7 +482,12 @@ def index() -> rx.Component:
         # Global styles container
         style={
             "min_height": "100vh",
-            "background": COLORS["bg_dark"],
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                COLORS["bg_dark"],
+                "#f8fafc",
+            ),
+            "transition": "background 0.3s ease",
         }
     )
 

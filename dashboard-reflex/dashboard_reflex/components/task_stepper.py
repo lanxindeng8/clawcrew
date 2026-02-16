@@ -216,7 +216,11 @@ def task_stepper() -> rx.Component:
                         "Task Pipeline",
                         font_size="1rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
                     rx.text(
                         "Real-time workflow progress",
@@ -245,7 +249,11 @@ def task_stepper() -> rx.Component:
                         style={
                             "width": "100px",
                             "height": "6px",
-                            "background": COLORS["border_subtle"],
+                            "background": rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["border_subtle"],
+                                "rgba(0, 0, 0, 0.1)",
+                            ),
                             "border_radius": "3px",
                             "overflow": "hidden",
                         },
@@ -260,7 +268,11 @@ def task_stepper() -> rx.Component:
                     align="center",
                 ),
                 style={
-                    "background": "rgba(255, 255, 255, 0.03)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        "rgba(255, 255, 255, 0.03)",
+                        "rgba(0, 0, 0, 0.03)",
+                    ),
                     "padding": "8px 14px",
                     "border_radius": "10px",
                 }
@@ -290,26 +302,42 @@ def task_stepper() -> rx.Component:
                         DashboardState.current_task_name,
                         font_size="0.9rem",
                         font_weight="500",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
                     rx.hstack(
                         rx.text(
                             f"ID: {DashboardState.current_task_id}",
                             font_size="0.7rem",
-                            color=COLORS["text_dim"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_dim"],
+                                "#64748b",
+                            ),
                         ),
                         rx.el.div(
                             style={
                                 "width": "4px",
                                 "height": "4px",
-                                "background": COLORS["text_dim"],
+                                "background": rx.cond(
+                                    DashboardState.dark_mode,
+                                    COLORS["text_dim"],
+                                    "#94a3b8",
+                                ),
                                 "border_radius": "50%",
                             }
                         ),
                         rx.text(
                             f"Started {DashboardState.current_task_started}",
                             font_size="0.7rem",
-                            color=COLORS["text_dim"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_dim"],
+                                "#64748b",
+                            ),
                         ),
                         spacing="2",
                         align="center",
@@ -356,7 +384,11 @@ def task_stepper() -> rx.Component:
                 width="100%",
             ),
             style={
-                "background": "rgba(255, 255, 255, 0.02)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.02)",
+                    "rgba(0, 0, 0, 0.02)",
+                ),
                 "border_radius": "18px",
                 "padding": "1.75rem 1.5rem",
                 "overflow_x": "auto",
@@ -364,10 +396,18 @@ def task_stepper() -> rx.Component:
         ),
 
         style={
-            "background": "rgba(15, 15, 28, 0.7)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 28, 0.7)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(24px)",
             "border_radius": "24px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1.5rem",
         }
     )

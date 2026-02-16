@@ -46,7 +46,11 @@ def stat_card(
                 label.upper(),
                 font_size="0.65rem",
                 font_weight="600",
-                color=COLORS["text_dim"],
+                color=rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_dim"],
+                    "#64748b",
+                ),
                 letter_spacing="1px",
             ),
 
@@ -56,7 +60,11 @@ def stat_card(
                     value,
                     font_size="1.75rem",
                     font_weight="700",
-                    color=COLORS["text_primary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                     line_height="1",
                 ),
                 rx.cond(
@@ -116,10 +124,18 @@ def stat_card(
 
         style={
             "position": "relative",
-            "background": "rgba(15, 15, 28, 0.7)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 28, 0.7)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "16px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1rem 1.25rem 1rem 1.5rem",
             "min_width": "180px",
             "flex": "1",
@@ -157,7 +173,11 @@ def stat_card_mini(icon: str, label: str, value, color: str = COLORS["primary"])
                     value,
                     font_size="1.1rem",
                     font_weight="700",
-                    color=COLORS["text_primary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                     line_height="1",
                 ),
                 rx.text(
@@ -172,9 +192,17 @@ def stat_card_mini(icon: str, label: str, value, color: str = COLORS["primary"])
             align="center",
         ),
         style={
-            "background": "rgba(15, 15, 28, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 28, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "border_radius": "12px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "0.75rem 1rem",
         }
     )
@@ -304,9 +332,17 @@ def skeleton_card(width: str = "200px", height: str = "280px") -> rx.Component:
         style={
             "width": width,
             "height": height,
-            "background": "rgba(18, 18, 28, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(18, 18, 28, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "border_radius": "20px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1rem",
         }
     )
@@ -325,10 +361,22 @@ def task_input_bar() -> rx.Component:
                 style={
                     "flex": "1",
                     "padding": "14px 18px",
-                    "background": "rgba(255, 255, 255, 0.05)",
-                    "border": f"1px solid {COLORS['border_subtle']}",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        "rgba(255, 255, 255, 0.05)",
+                        "rgba(0, 0, 0, 0.03)",
+                    ),
+                    "border": rx.cond(
+                        DashboardState.dark_mode,
+                        f"1px solid {COLORS['border_subtle']}",
+                        "1px solid rgba(0, 0, 0, 0.1)",
+                    ),
                     "border_radius": "14px",
-                    "color": COLORS["text_primary"],
+                    "color": rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                     "font_size": "0.9rem",
                     "outline": "none",
                     "_focus": {
@@ -383,10 +431,18 @@ def task_input_bar() -> rx.Component:
             width="100%",
         ),
         style={
-            "background": "rgba(18, 18, 28, 0.8)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(18, 18, 28, 0.8)",
+                "rgba(255, 255, 255, 0.95)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "18px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "0.75rem",
             "margin_bottom": "1.5rem",
         }
@@ -401,7 +457,11 @@ def section_header(title: str, icon: str = "") -> rx.Component:
             title,
             font_size="1.1rem",
             font_weight="600",
-            color=COLORS["text_primary"],
+            color=rx.cond(
+                DashboardState.dark_mode,
+                COLORS["text_primary"],
+                "#0f172a",
+            ),
         ),
         spacing="2",
         margin_bottom="1rem",

@@ -69,6 +69,59 @@ AGENT_COLORS = {
 }
 
 # ============================================================
+# LIGHT MODE COLORS
+# ============================================================
+
+COLORS_LIGHT = {
+    # Backgrounds - Clean white/gray
+    "bg_dark": "#f8fafc",
+    "bg_darker": "#f1f5f9",
+    "bg_card": "rgba(255, 255, 255, 0.9)",
+    "bg_card_hover": "rgba(255, 255, 255, 0.95)",
+    "bg_elevated": "rgba(255, 255, 255, 0.98)",
+    "bg_input": "rgba(0, 0, 0, 0.03)",
+    "bg_input_focus": "rgba(0, 0, 0, 0.05)",
+    "bg_overlay": "rgba(0, 0, 0, 0.4)",
+
+    # Borders
+    "border_subtle": "rgba(0, 0, 0, 0.08)",
+    "border_muted": "rgba(0, 0, 0, 0.12)",
+    "border_accent": "rgba(124, 58, 237, 0.3)",
+    "border_focus": "rgba(124, 58, 237, 0.5)",
+
+    # Primary Accent (same)
+    "primary": "#7c3aed",
+    "primary_light": "#8b5cf6",
+    "primary_dark": "#6d28d9",
+    "secondary": "#3b82f6",
+    "primary_glow": "rgba(124, 58, 237, 0.2)",
+
+    # Text
+    "text_primary": "#0f172a",
+    "text_secondary": "#475569",
+    "text_muted": "#64748b",
+    "text_dim": "#94a3b8",
+
+    # Status Colors (same)
+    "status_online": "#22c55e",
+    "status_working": "#f59e0b",
+    "status_away": "#6b7280",
+    "status_error": "#ef4444",
+    "status_offline": "#9ca3af",
+
+    # Semantic (same)
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "error": "#ef4444",
+    "info": "#3b82f6",
+
+    # Accent colors (same)
+    "accent_cyan": "#06b6d4",
+    "accent_pink": "#ec4899",
+    "accent_orange": "#f97316",
+}
+
+# ============================================================
 # GLASSMORPHISM PRESETS
 # ============================================================
 

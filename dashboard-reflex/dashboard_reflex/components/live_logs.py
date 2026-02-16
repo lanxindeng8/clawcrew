@@ -25,22 +25,34 @@ def filter_chip(agent: str, emoji: str) -> rx.Component:
             "background": rx.cond(
                 is_selected,
                 f"{AGENT_COLORS.get(agent.title(), COLORS['primary'])}30",
-                "rgba(255, 255, 255, 0.05)",
+                rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.05)",
+                    "rgba(0, 0, 0, 0.05)",
+                ),
             ),
             "border": rx.cond(
                 is_selected,
                 f"1px solid {AGENT_COLORS.get(agent.title(), COLORS['primary'])}60",
-                f"1px solid {COLORS['border_subtle']}",
+                rx.cond(
+                    DashboardState.dark_mode,
+                    f"1px solid {COLORS['border_subtle']}",
+                    "1px solid rgba(0, 0, 0, 0.1)",
+                ),
             ),
             "color": rx.cond(
                 is_selected,
-                COLORS["text_primary"],
-                COLORS["text_secondary"],
+                rx.cond(DashboardState.dark_mode, COLORS["text_primary"], "#0f172a"),
+                rx.cond(DashboardState.dark_mode, COLORS["text_secondary"], "#475569"),
             ),
             "cursor": "pointer",
             "transition": "all 0.2s ease",
             "_hover": {
-                "background": "rgba(255, 255, 255, 0.1)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(0, 0, 0, 0.08)",
+                ),
             }
         },
         on_click=lambda: DashboardState.toggle_log_filter(agent),
@@ -113,7 +125,11 @@ def log_entry(log) -> rx.Component:
             rx.text(
                 log.message,
                 font_size="0.8rem",
-                color=COLORS["text_secondary"],
+                color=rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_secondary"],
+                    "#475569",
+                ),
                 flex="1",
             ),
             spacing="3",
@@ -122,10 +138,18 @@ def log_entry(log) -> rx.Component:
         ),
         style={
             "padding": "10px 12px",
-            "border_bottom": f"1px solid {COLORS['border_subtle']}",
+            "border_bottom": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.06)",
+            ),
             "transition": "background 0.2s ease",
             "_hover": {
-                "background": "rgba(255, 255, 255, 0.02)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255, 255, 255, 0.02)",
+                    "rgba(0, 0, 0, 0.02)",
+                ),
             },
         },
         class_name="log-entry",
@@ -145,7 +169,11 @@ def live_logs() -> rx.Component:
                     "Live Logs",
                     font_size="1.1rem",
                     font_weight="600",
-                    color=COLORS["text_primary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_primary"],
+                        "#0f172a",
+                    ),
                 ),
                 spacing="2",
             ),
@@ -169,12 +197,20 @@ def live_logs() -> rx.Component:
                         "background": rx.cond(
                             DashboardState.log_auto_scroll,
                             f"{COLORS['status_online']}20",
-                            "rgba(255, 255, 255, 0.05)",
+                            rx.cond(
+                                DashboardState.dark_mode,
+                                "rgba(255, 255, 255, 0.05)",
+                                "rgba(0, 0, 0, 0.05)",
+                            ),
                         ),
                         "border": rx.cond(
                             DashboardState.log_auto_scroll,
                             f"1px solid {COLORS['status_online']}40",
-                            f"1px solid {COLORS['border_subtle']}",
+                            rx.cond(
+                                DashboardState.dark_mode,
+                                f"1px solid {COLORS['border_subtle']}",
+                                "1px solid rgba(0, 0, 0, 0.1)",
+                            ),
                         ),
                         "color": rx.cond(
                             DashboardState.log_auto_scroll,
@@ -203,10 +239,22 @@ def live_logs() -> rx.Component:
                     style={
                         "width": "100%",
                         "padding": "10px 14px 10px 36px",
-                        "background": "rgba(255, 255, 255, 0.05)",
-                        "border": f"1px solid {COLORS['border_subtle']}",
+                        "background": rx.cond(
+                            DashboardState.dark_mode,
+                            "rgba(255, 255, 255, 0.05)",
+                            "rgba(0, 0, 0, 0.03)",
+                        ),
+                        "border": rx.cond(
+                            DashboardState.dark_mode,
+                            f"1px solid {COLORS['border_subtle']}",
+                            "1px solid rgba(0, 0, 0, 0.1)",
+                        ),
                         "border_radius": "10px",
-                        "color": COLORS["text_primary"],
+                        "color": rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                         "font_size": "0.85rem",
                         "outline": "none",
                         "_focus": {
@@ -275,11 +323,19 @@ def live_logs() -> rx.Component:
                 log_entry,
             ),
             style={
-                "background": "rgba(10, 10, 18, 0.8)",
+                "background": rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(10, 10, 18, 0.8)",
+                    "rgba(255, 255, 255, 0.95)",
+                ),
                 "border_radius": "14px",
                 "max_height": "350px",
                 "overflow_y": "auto",
-                "border": f"1px solid {COLORS['border_subtle']}",
+                "border": rx.cond(
+                    DashboardState.dark_mode,
+                    f"1px solid {COLORS['border_subtle']}",
+                    "1px solid rgba(0, 0, 0, 0.08)",
+                ),
             }
         ),
 
@@ -314,10 +370,18 @@ def live_logs() -> rx.Component:
         ),
 
         style={
-            "background": "rgba(18, 18, 28, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(18, 18, 28, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "20px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "padding": "1.5rem",
         }
     )

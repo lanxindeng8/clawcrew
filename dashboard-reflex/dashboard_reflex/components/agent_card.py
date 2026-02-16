@@ -102,7 +102,11 @@ def agent_card(agent) -> rx.Component:
                         agent.name,
                         font_size="1rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
                     rx.spacer(),
                     rx.hstack(
@@ -131,7 +135,11 @@ def agent_card(agent) -> rx.Component:
                             agent.tokens,
                             font_size="0.8rem",
                             font_weight="600",
-                            color=COLORS["text_secondary"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_secondary"],
+                                "#475569",
+                            ),
                         ),
                         spacing="1",
                         align="center",
@@ -143,7 +151,11 @@ def agent_card(agent) -> rx.Component:
                             agent.tasks_completed,
                             font_size="0.8rem",
                             font_weight="600",
-                            color=COLORS["text_secondary"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_secondary"],
+                                "#475569",
+                            ),
                         ),
                         spacing="1",
                         align="center",
@@ -153,11 +165,19 @@ def agent_card(agent) -> rx.Component:
                         rx.text(
                             agent.model.to(str).split("/")[-1][:12],
                             font_size="0.65rem",
-                            color=COLORS["text_dim"],
+                            color=rx.cond(
+                                DashboardState.dark_mode,
+                                COLORS["text_dim"],
+                                "#64748b",
+                            ),
                         ),
                         style={
                             "padding": "2px 8px",
-                            "background": "rgba(255,255,255,0.05)",
+                            "background": rx.cond(
+                                DashboardState.dark_mode,
+                                "rgba(255,255,255,0.05)",
+                                "rgba(0,0,0,0.05)",
+                            ),
                             "border_radius": "6px",
                         }
                     ),
@@ -183,7 +203,11 @@ def agent_card(agent) -> rx.Component:
                 rx.text(
                     agent.current_task,
                     font_size="0.75rem",
-                    color=COLORS["text_secondary"],
+                    color=rx.cond(
+                        DashboardState.dark_mode,
+                        COLORS["text_secondary"],
+                        "#475569",
+                    ),
                     style={
                         "overflow": "hidden",
                         "text_overflow": "ellipsis",
@@ -203,10 +227,18 @@ def agent_card(agent) -> rx.Component:
 
         style={
             "padding": "16px",
-            "background": "rgba(15, 15, 30, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 30, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "16px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "cursor": "pointer",
             "transition": "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             "width": "100%",
@@ -214,8 +246,7 @@ def agent_card(agent) -> rx.Component:
             "_hover": {
                 "transform": "translateY(-4px)",
                 "border_color": f"{agent_color}40",
-                "box_shadow": f"0 0 30px {agent_color}15, 0 8px 32px rgba(0, 0, 0, 0.3)",
-                "background": "rgba(20, 20, 38, 0.7)",
+                "box_shadow": f"0 0 30px {agent_color}15, 0 8px 32px rgba(0, 0, 0, 0.15)",
             },
         },
         on_click=lambda: DashboardState.open_agent_drawer(agent.id),
@@ -264,7 +295,11 @@ def agent_card_compact(agent) -> rx.Component:
                 agent.name,
                 font_size="0.95rem",
                 font_weight="600",
-                color=COLORS["text_primary"],
+                color=rx.cond(
+                    DashboardState.dark_mode,
+                    COLORS["text_primary"],
+                    "#0f172a",
+                ),
             ),
 
             # Role
@@ -282,7 +317,11 @@ def agent_card_compact(agent) -> rx.Component:
                 align="center",
                 style={
                     "padding": "4px 10px",
-                    "background": "rgba(255,255,255,0.03)",
+                    "background": rx.cond(
+                        DashboardState.dark_mode,
+                        "rgba(255,255,255,0.03)",
+                        "rgba(0,0,0,0.03)",
+                    ),
                     "border_radius": "8px",
                     "margin_top": "4px",
                 }
@@ -295,9 +334,21 @@ def agent_card_compact(agent) -> rx.Component:
                         agent.tokens,
                         font_size="0.85rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
-                    rx.text("tokens", font_size="0.6rem", color=COLORS["text_dim"]),
+                    rx.text(
+                        "tokens",
+                        font_size="0.6rem",
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_dim"],
+                            "#64748b",
+                        ),
+                    ),
                     spacing="0",
                     align="center",
                 ),
@@ -305,7 +356,11 @@ def agent_card_compact(agent) -> rx.Component:
                     style={
                         "width": "1px",
                         "height": "24px",
-                        "background": COLORS["border_subtle"],
+                        "background": rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["border_subtle"],
+                            "rgba(0,0,0,0.08)",
+                        ),
                     }
                 ),
                 rx.vstack(
@@ -313,9 +368,21 @@ def agent_card_compact(agent) -> rx.Component:
                         agent.tasks_completed,
                         font_size="0.85rem",
                         font_weight="600",
-                        color=COLORS["text_primary"],
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_primary"],
+                            "#0f172a",
+                        ),
                     ),
-                    rx.text("tasks", font_size="0.6rem", color=COLORS["text_dim"]),
+                    rx.text(
+                        "tasks",
+                        font_size="0.6rem",
+                        color=rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_dim"],
+                            "#64748b",
+                        ),
+                    ),
                     spacing="0",
                     align="center",
                 ),
@@ -323,7 +390,11 @@ def agent_card_compact(agent) -> rx.Component:
                 spacing="4",
                 margin_top="8px",
                 padding="8px",
-                background="rgba(255,255,255,0.02)",
+                background=rx.cond(
+                    DashboardState.dark_mode,
+                    "rgba(255,255,255,0.02)",
+                    "rgba(0,0,0,0.02)",
+                ),
                 border_radius="8px",
                 width="100%",
             ),
@@ -336,16 +407,24 @@ def agent_card_compact(agent) -> rx.Component:
         style={
             "position": "relative",
             "width": "160px",
-            "background": "rgba(15, 15, 30, 0.6)",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "rgba(15, 15, 30, 0.6)",
+                "rgba(255, 255, 255, 0.9)",
+            ),
             "backdrop_filter": "blur(20px)",
             "border_radius": "16px",
-            "border": f"1px solid {COLORS['border_subtle']}",
+            "border": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "cursor": "pointer",
             "transition": "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             "_hover": {
                 "transform": "translateY(-4px) scale(1.02)",
                 "border_color": f"{agent_color}40",
-                "box_shadow": f"0 0 30px {agent_color}15, 0 8px 32px rgba(0, 0, 0, 0.3)",
+                "box_shadow": f"0 0 30px {agent_color}15, 0 8px 32px rgba(0, 0, 0, 0.15)",
             },
         },
         on_click=lambda: DashboardState.open_agent_drawer(agent.id),

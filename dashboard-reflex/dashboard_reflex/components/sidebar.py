@@ -358,6 +358,64 @@ def sidebar() -> rx.Component:
 
             # Footer controls
             rx.el.div(
+                # Theme toggle (Dark/Light mode)
+                rx.el.button(
+                    rx.hstack(
+                        rx.cond(
+                            DashboardState.dark_mode,
+                            rx.text("🌙", font_size="1rem"),
+                            rx.text("☀️", font_size="1rem"),
+                        ),
+                        rx.cond(
+                            ~DashboardState.sidebar_collapsed,
+                            rx.text(
+                                rx.cond(
+                                    DashboardState.dark_mode,
+                                    "Dark Mode",
+                                    "Light Mode",
+                                ),
+                                font_size="0.8rem",
+                                font_weight="500",
+                            ),
+                            rx.fragment(),
+                        ),
+                        spacing="2",
+                        align="center",
+                        justify="center",
+                    ),
+                    style={
+                        "width": "100%",
+                        "padding": "10px 14px",
+                        "background": rx.cond(
+                            DashboardState.dark_mode,
+                            "rgba(255, 255, 255, 0.05)",
+                            "rgba(0, 0, 0, 0.05)",
+                        ),
+                        "border": rx.cond(
+                            DashboardState.dark_mode,
+                            f"1px solid {COLORS['border_subtle']}",
+                            "1px solid rgba(0, 0, 0, 0.1)",
+                        ),
+                        "border_radius": "10px",
+                        "color": rx.cond(
+                            DashboardState.dark_mode,
+                            COLORS["text_secondary"],
+                            "#475569",
+                        ),
+                        "cursor": "pointer",
+                        "transition": "all 0.2s ease",
+                        "margin_bottom": "12px",
+                        "_hover": {
+                            "background": rx.cond(
+                                DashboardState.dark_mode,
+                                "rgba(255, 255, 255, 0.1)",
+                                "rgba(0, 0, 0, 0.08)",
+                            ),
+                        },
+                    },
+                    on_click=DashboardState.toggle_dark_mode,
+                ),
+
                 # Auto-refresh toggle
                 rx.hstack(
                     rx.cond(
@@ -487,14 +545,22 @@ def sidebar() -> rx.Component:
         style={
             "width": rx.cond(DashboardState.sidebar_collapsed, "72px", "260px"),
             "min_height": "100vh",
-            "background": "linear-gradient(180deg, rgba(10, 10, 26, 0.96) 0%, rgba(5, 5, 15, 0.98) 100%)",
-            "border_right": f"1px solid {COLORS['border_subtle']}",
+            "background": rx.cond(
+                DashboardState.dark_mode,
+                "linear-gradient(180deg, rgba(10, 10, 26, 0.96) 0%, rgba(5, 5, 15, 0.98) 100%)",
+                "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)",
+            ),
+            "border_right": rx.cond(
+                DashboardState.dark_mode,
+                f"1px solid {COLORS['border_subtle']}",
+                "1px solid rgba(0, 0, 0, 0.08)",
+            ),
             "position": "fixed",
             "left": "0",
             "top": "0",
             "z_index": "100",
             "backdrop_filter": "blur(20px)",
-            "transition": "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "transition": "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease",
             "overflow": "hidden",
         }
     )
