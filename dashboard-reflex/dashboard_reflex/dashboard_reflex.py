@@ -435,12 +435,185 @@ def agent_card(agent) -> rx.Component:
     )
 
 
+def agent_card_grid(agent) -> rx.Component:
+    """Render an agent card for grid layout (no absolute positioning)."""
+    # Use rx.match for status-based color
+    status_color = rx.match(
+        agent["status"],
+        ("online", STATUS_COLORS["online"]),
+        ("working", STATUS_COLORS["working"]),
+        ("away", STATUS_COLORS["away"]),
+        ("error", STATUS_COLORS["error"]),
+        STATUS_COLORS["offline"],
+    )
+
+    status_icon = rx.match(
+        agent["status"],
+        ("online", "🟢"),
+        ("working", "🟠"),
+        ("away", "🟡"),
+        ("error", "🔴"),
+        "⚪",
+    )
+
+    status_label = rx.match(
+        agent["status"],
+        ("online", "Online"),
+        ("working", "Working"),
+        ("away", "Away"),
+        ("error", "Error"),
+        "Offline",
+    )
+
+    return rx.el.div(
+        # Desktop icon (top-right)
+        rx.el.div(
+            "🖥️",
+            style={
+                "position": "absolute",
+                "top": "-8px",
+                "right": "8px",
+                "font_size": "1.1rem",
+                "background": "white",
+                "padding": "2px 6px",
+                "border_radius": "6px",
+                "box_shadow": "0 2px 6px rgba(0,0,0,0.1)",
+            }
+        ),
+        # Lead badge (if Orca)
+        rx.cond(
+            agent["name"] == "Orca",
+            rx.el.div(
+                "👑 LEAD",
+                style={
+                    "position": "absolute",
+                    "top": "-8px",
+                    "left": "8px",
+                    "background": "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                    "color": "white",
+                    "padding": "2px 8px",
+                    "border_radius": "8px",
+                    "font_size": "0.6rem",
+                    "font_weight": "700",
+                }
+            ),
+            rx.fragment(),
+        ),
+        # Avatar
+        rx.el.div(
+            agent["emoji"],
+            style={
+                "width": "60px",
+                "height": "60px",
+                "margin": "0.5rem auto",
+                "background": "linear-gradient(145deg, #fff, #f1f5f9)",
+                "border_radius": "50%",
+                "display": "flex",
+                "align_items": "center",
+                "justify_content": "center",
+                "font_size": "2rem",
+                "border": "3px solid " + COLORS["accent_indigo"],
+            }
+        ),
+        # Name
+        rx.el.h4(
+            agent["name"],
+            style={
+                "text_align": "center",
+                "margin": "0.3rem 0 0.1rem",
+                "font_size": "0.95rem",
+                "color": COLORS["text"],
+            }
+        ),
+        # Role
+        rx.el.p(
+            agent["role"],
+            style={
+                "text_align": "center",
+                "color": COLORS["text_secondary"],
+                "font_size": "0.7rem",
+                "margin": "0 0 0.4rem",
+            }
+        ),
+        # Status badge
+        rx.el.div(
+            rx.hstack(
+                rx.text(status_icon, font_size="0.8rem"),
+                rx.text(status_label, font_size="0.75rem"),
+                spacing="1",
+                justify="center",
+            ),
+            style={
+                "text_align": "center",
+                "margin": "0.3rem auto",
+                "padding": "3px 10px",
+                "border_radius": "12px",
+                "font_weight": "600",
+                "width": "fit-content",
+                "background": "#f1f5f9",
+            }
+        ),
+        # Stats
+        rx.el.div(
+            rx.vstack(
+                rx.hstack(
+                    rx.text("📊", font_size="0.7rem"),
+                    rx.text(agent["tokens"], font_weight="600", font_size="0.7rem"),
+                    spacing="1",
+                ),
+                rx.hstack(
+                    rx.text("📋", font_size="0.7rem"),
+                    rx.text(agent["tasks"], font_weight="600", font_size="0.7rem"),
+                    spacing="1",
+                ),
+                spacing="1",
+            ),
+            style={
+                "background": "#f8fafc",
+                "border_radius": "6px",
+                "padding": "6px",
+                "margin_top": "6px",
+            }
+        ),
+        # Current task (if any)
+        rx.cond(
+            agent["current_task"] != "",
+            rx.el.div(
+                rx.text("💬 ", agent["current_task"], font_size="0.65rem"),
+                style={
+                    "background": "#f0f9ff",
+                    "border_radius": "6px",
+                    "padding": "4px 8px",
+                    "margin_top": "6px",
+                    "border_left": "2px solid " + COLORS["accent_indigo"],
+                    "color": COLORS["text_secondary"],
+                    "overflow": "hidden",
+                    "text_overflow": "ellipsis",
+                    "white_space": "nowrap",
+                }
+            ),
+            rx.fragment(),
+        ),
+        # Card container styles
+        style={
+            "position": "relative",
+            "background": "rgba(255,255,255,0.95)",
+            "backdrop_filter": "blur(10px)",
+            "border_radius": "12px",
+            "padding": "0.75rem",
+            "border": "2px solid " + COLORS["accent_indigo"] + "30",
+            "box_shadow": "0 4px 15px rgba(0,0,0,0.08)",
+            "transition": "all 0.2s ease",
+        }
+    )
+
+
 # ============================================================
 # VIRTUAL OFFICE: Main agents area with office background
 # ============================================================
 
 def virtual_office() -> rx.Component:
-    """Render the Virtual Office agents area."""
+    """Render the Virtual Office agents area using grid layout."""
     return rx.el.div(
         # Office title badge
         rx.el.div(
@@ -450,50 +623,46 @@ def virtual_office() -> rx.Component:
                 spacing="2",
             ),
             style={
-                "position": "absolute",
-                "top": "-15px",
-                "left": "50%",
-                "transform": "translateX(-50%)",
+                "text_align": "center",
                 "background": "linear-gradient(135deg, #6366f1, #8b5cf6)",
                 "color": "white",
                 "padding": "8px 24px",
                 "border_radius": "25px",
                 "font_size": "0.8rem",
                 "box_shadow": "0 4px 15px rgba(99,102,241,0.4)",
-                "z_index": "20",
+                "width": "fit-content",
+                "margin": "0 auto 1rem",
             }
         ),
         # Workflow arrows (center)
+        rx.hstack(
+            rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+            rx.text("→", color="#6366f1", font_weight="bold", font_size="1.2rem"),
+            rx.el.span("🎨 Design", style={"background": "#8b5cf6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+            rx.text("→", color="#8b5cf6", font_weight="bold", font_size="1.2rem"),
+            rx.el.span("💻 Code", style={"background": "#3b82f6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+            rx.text("→", color="#3b82f6", font_weight="bold", font_size="1.2rem"),
+            rx.el.span("🧪 Test", style={"background": "#10b981", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
+            spacing="2",
+            justify="center",
+            margin_bottom="1.5rem",
+        ),
+        # Agent cards in a grid (not absolute positioning)
         rx.el.div(
-            rx.hstack(
-                rx.el.span("🦑 Orca", style={"background": "#6366f1", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color="#6366f1", font_weight="bold", font_size="1.2rem"),
-                rx.el.span("🎨 Design", style={"background": "#8b5cf6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color="#8b5cf6", font_weight="bold", font_size="1.2rem"),
-                rx.el.span("💻 Code", style={"background": "#3b82f6", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                rx.text("→", color="#3b82f6", font_weight="bold", font_size="1.2rem"),
-                rx.el.span("🧪 Test", style={"background": "#10b981", "color": "white", "padding": "4px 12px", "border_radius": "12px", "font_weight": "600", "font_size": "0.8rem"}),
-                spacing="2",
-                justify="center",
+            rx.foreach(
+                State.agents,
+                agent_card_grid,
             ),
             style={
-                "position": "absolute",
-                "top": "30px",
-                "left": "50%",
-                "transform": "translateX(-50%)",
-                "z_index": "15",
+                "display": "grid",
+                "grid_template_columns": "repeat(4, 1fr)",
+                "gap": "1rem",
+                "width": "100%",
             }
-        ),
-        # Agent cards (absolutely positioned)
-        rx.foreach(
-            State.agents,
-            agent_card,
         ),
         # Container styles with office background
         style={
-            "position": "relative",
             "width": "100%",
-            "height": "500px",
             "background": """
                 linear-gradient(135deg, rgba(248,250,252,0.92) 0%, rgba(241,245,249,0.92) 100%),
                 url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80')
@@ -503,8 +672,7 @@ def virtual_office() -> rx.Component:
             "border_radius": "20px",
             "border": "1px solid #e2e8f0",
             "box_shadow": "0 10px 40px rgba(0,0,0,0.08)",
-            "margin": "1rem 0",
-            "overflow": "visible",
+            "padding": "1.5rem",
         }
     )
 
@@ -787,6 +955,8 @@ def index() -> rx.Component:
                 "padding": "1.5rem",
                 "min_height": "100vh",
                 "background": COLORS["bg"],
+                "width": "calc(100% - 260px)",
+                "max_width": "100%",
             }
         ),
         spacing="0",
