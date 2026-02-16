@@ -178,10 +178,39 @@ USER REQUEST
 
 ## 🚀 Getting Started
 
-> **Prerequisites:** OpenClaw already installed and configured.  
+> **Prerequisites:** OpenClaw already installed and configured.
 > See [OpenClaw docs](https://docs.openclaw.ai) for installation.
 
-### Step 1: Create Telegram Bot
+### Option A: One-Click Install (Recommended)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/lanxindeng8/clawcrew/main/install.sh | bash
+```
+
+This will:
+1. Check and install dependencies (Python 3.10+, pip, jq)
+2. Install ClawCrew via pip
+3. Run the interactive setup wizard
+
+### Option B: Install via pip
+
+```bash
+pip install clawcrew
+clawcrew init
+```
+
+### Option C: Docker
+
+```bash
+git clone https://github.com/lanxindeng8/clawcrew
+cd clawcrew
+cp .env.example .env  # Edit with your Telegram credentials
+docker-compose up -d
+```
+
+### Option D: Manual Setup
+
+#### Step 1: Create Telegram Bot
 
 Only need **1 bot** for all agents.
 
@@ -191,36 +220,81 @@ Only need **1 bot** for all agents.
    - `/mybots` → Select your bot → Bot Settings → Group Privacy → **Turn off**
    - This lets the bot see all messages in groups
 
-### Step 2: Create Telegram Group
+#### Step 2: Create Telegram Group
 
 1. Create a group called "OpenClaw Dev" (or any name)
 2. Add your bot to the group
 3. Get the group's `chat_id`
 
-### Step 3: Clone & Configure
+#### Step 3: Clone & Configure
 
 ```bash
 git clone https://github.com/lanxindeng8/clawcrew
 cd clawcrew
-```
-
-### Step 4: Set Up Workspaces
-
-```bash
 ./setup.sh
 ```
 
-### Step 5: Start the Crew
+### Start the Crew
 
 ```bash
-openclaw gateway restart
+clawcrew start   # or: openclaw gateway restart
+clawcrew status  # Check if everything is running
 ```
 
-### Step 6: Send a Task
+### Send a Task
 
 In your Telegram group:
 ```
 Create a Python module to calculate distance between two points
+```
+
+Or use the CLI:
+```bash
+clawcrew chain "Create a distance calculator module" design code test
+```
+
+---
+
+## 💻 CLI Reference
+
+### Core Commands
+
+| Command | Description |
+|---------|-------------|
+| `clawcrew init` | Interactive setup wizard |
+| `clawcrew start` | Start the OpenClaw gateway |
+| `clawcrew stop` | Stop the gateway |
+| `clawcrew status` | Show system and agent status |
+| `clawcrew agents` | List available agents |
+
+### Running Agents
+
+```bash
+# Run a single agent
+clawcrew run design -t "Design a REST API for users"
+
+# Run with context file
+clawcrew run code -t "Implement the API" -c design.md -o api.py
+
+# Chain multiple agents (auto context passing)
+clawcrew chain "Create user authentication" design code test
+```
+
+### GitHub Integration
+
+```bash
+clawcrew github analyze --url https://github.com/user/repo
+clawcrew github issues -r user/repo
+clawcrew github read-issue -r user/repo -n 123
+clawcrew github create-pr -r user/repo -t "Fix bug" -H fix-branch
+```
+
+### Memory Management
+
+```bash
+clawcrew show-memory -a design    # Show agent's memories
+clawcrew clear-memory -a design   # Clear today's memories
+clawcrew clear-memory -a design --all  # Clear all memories
 ```
 
 ---
