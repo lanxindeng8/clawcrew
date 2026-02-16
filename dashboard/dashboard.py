@@ -630,59 +630,38 @@ def render_virtual_office_agent(agent: dict, show_details: bool = True):
 def render_agent_floor_native(agents: list):
     """Render the Virtual Office agent floor using native Streamlit components."""
 
-    # ========== VIRTUAL OFFICE CONTAINER ==========
-    # Office background with isometric floor pattern + desk grid
+    # ========== VIRTUAL OFFICE HEADER ==========
     st.markdown("""
     <div style="
-        background:
-            url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80') center/cover no-repeat,
-            linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(241,245,249,0.95) 100%);
+        background: linear-gradient(135deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.98) 100%),
+            url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80') center/cover;
         background-blend-mode: overlay;
-        border-radius: 20px;
-        padding: 2rem 1.5rem 1.5rem;
-        margin: 0.5rem 0;
-        border: 2px solid #e2e8f0;
-        position: relative;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     ">
-        <!-- Office Title Badge -->
-        <div style="
-            position: absolute;
-            top: -14px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            padding: 6px 20px;
-            border-radius: 25px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        ">
-            <span style="font-size:1rem;">🏢</span> VIRTUAL OFFICE
+        <div style="text-align:center;margin-bottom:1rem;">
+            <span style="
+                background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                color: white;
+                padding: 6px 20px;
+                border-radius: 25px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 1px;
+                box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+            ">🏢 VIRTUAL OFFICE</span>
         </div>
-
-        <!-- Workflow Arrow: Orca → Design → Code → Test -->
-        <div style="
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 1rem 0 1.5rem;
-            gap: 0.5rem;
-            font-size: 0.8rem;
-            color: #64748b;
-        ">
-            <span style="background:#6366f1;color:white;padding:4px 10px;border-radius:12px;font-weight:600;">🦑 Orca</span>
-            <span style="color:#6366f1;">→</span>
-            <span style="background:#8b5cf6;color:white;padding:4px 10px;border-radius:12px;font-weight:600;">🎨 Design</span>
-            <span style="color:#8b5cf6;">→</span>
-            <span style="background:#3b82f6;color:white;padding:4px 10px;border-radius:12px;font-weight:600;">💻 Code</span>
-            <span style="color:#3b82f6;">→</span>
-            <span style="background:#10b981;color:white;padding:4px 10px;border-radius:12px;font-weight:600;">🧪 Test</span>
+        <div style="display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <span style="background:#6366f1;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🦑 Orca</span>
+            <span style="color:#6366f1;font-weight:bold;">→</span>
+            <span style="background:#8b5cf6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🎨 Design</span>
+            <span style="color:#8b5cf6;font-weight:bold;">→</span>
+            <span style="background:#3b82f6;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">💻 Code</span>
+            <span style="color:#3b82f6;font-weight:bold;">→</span>
+            <span style="background:#10b981;color:white;padding:4px 12px;border-radius:12px;font-weight:600;font-size:0.8rem;">🧪 Test</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -690,13 +669,7 @@ def render_agent_floor_native(agents: list):
     # ========== AGENT WORKSTATION CARDS ==========
     cols = st.columns(4, gap="medium")
 
-    # Agent-specific colors for desk accent
-    agent_colors = {
-        "orca": "#6366f1",
-        "design": "#8b5cf6",
-        "code": "#3b82f6",
-        "test": "#10b981"
-    }
+    agent_colors = {"orca": "#6366f1", "design": "#8b5cf6", "code": "#3b82f6", "test": "#10b981"}
 
     for i, agent in enumerate(agents):
         with cols[i % 4]:
@@ -705,144 +678,41 @@ def render_agent_floor_native(agents: list):
             accent_color = agent_colors.get(agent_name, "#6366f1")
             is_lead = agent_name == "orca"
 
-            # Status styling with glow effect
-            status_styles = {
-                "running": {
-                    "bg": "#ffedd5", "color": "#c2410c", "glow": "0 0 20px rgba(249,115,22,0.5)",
-                    "dot_bg": "radial-gradient(circle, #f97316 30%, #fb923c 100%)", "label": "Working"
-                },
-                "idle": {
-                    "bg": "#dcfce7", "color": "#15803d", "glow": "0 0 15px rgba(34,197,94,0.4)",
-                    "dot_bg": "radial-gradient(circle, #22c55e 30%, #4ade80 100%)", "label": "Online"
-                },
-                "completed": {
-                    "bg": "#f1f5f9", "color": "#64748b", "glow": "none",
-                    "dot_bg": "#94a3b8", "label": "Done"
-                },
-                "error": {
-                    "bg": "#fee2e2", "color": "#b91c1c", "glow": "0 0 15px rgba(239,68,68,0.4)",
-                    "dot_bg": "radial-gradient(circle, #ef4444 30%, #f87171 100%)", "label": "Error"
-                },
+            status_config = {
+                "running": {"bg": "#ffedd5", "color": "#c2410c", "dot": "#f97316", "label": "Working"},
+                "idle": {"bg": "#dcfce7", "color": "#15803d", "dot": "#22c55e", "label": "Online"},
+                "completed": {"bg": "#f1f5f9", "color": "#64748b", "dot": "#94a3b8", "label": "Done"},
+                "error": {"bg": "#fee2e2", "color": "#b91c1c", "dot": "#ef4444", "label": "Error"},
             }
-            st_style = status_styles.get(status, status_styles["idle"])
+            cfg = status_config.get(status, status_config["idle"])
 
-            # Card with desk styling
+            lead_badge = f'<div style="position:absolute;top:-10px;left:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;padding:3px 10px;border-radius:10px;font-size:0.65rem;font-weight:700;">👑 LEAD</div>' if is_lead else ''
+
             st.markdown(f"""
-            <div style="
-                background: rgba(255,255,255,0.92);
-                backdrop-filter: blur(10px);
-                border-radius: 16px;
-                padding: 1rem;
-                border: 2px solid {accent_color}40;
-                box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-                position: relative;
-                transition: all 0.3s ease;
-            ">
-                <!-- Desk Icon -->
-                <div style="
-                    position: absolute;
-                    top: -12px;
-                    right: 12px;
-                    font-size: 1.2rem;
-                    background: white;
-                    padding: 2px 6px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                ">🖥️</div>
-
-                <!-- Lead Badge -->
-                {"<div style='position:absolute;top:-10px;left:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:white;padding:3px 10px;border-radius:10px;font-size:0.65rem;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,0.4);'>👑 LEAD</div>" if is_lead else ""}
-
-                <!-- Status Light (large, glowing) -->
-                <div style="
-                    position: absolute;
-                    top: 12px;
-                    left: 12px;
-                    width: 14px;
-                    height: 14px;
-                    border-radius: 50%;
-                    background: {st_style['dot_bg']};
-                    box-shadow: {st_style['glow']};
-                    {"animation: pulse-glow 1.5s infinite;" if status == "running" else ""}
-                "></div>
-
-                <!-- Avatar with desk background -->
-                <div style="text-align:center;margin:0.75rem 0 0.5rem;">
-                    <div style="
-                        width: 65px;
-                        height: 65px;
-                        margin: 0 auto;
-                        background: linear-gradient(145deg, #ffffff, #f1f5f9);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 2.2rem;
-                        border: 3px solid {accent_color};
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    ">
-                        {agent.get('emoji', '🤖')}
-                    </div>
-                </div>
-
-                <!-- Name & Role -->
-                <h4 style="text-align:center;margin:0.5rem 0 0.25rem;font-size:1rem;color:#1e293b;">{agent.get('name', '?').title()}</h4>
-                <p style="text-align:center;color:#64748b;font-size:0.75rem;margin:0 0 0.5rem;">{agent.get('role', 'Agent')}</p>
-
-                <!-- Status Badge -->
+            <div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:1rem;border:2px solid {accent_color}40;box-shadow:0 8px 25px rgba(0,0,0,0.08);position:relative;margin-top:12px;">
+                <div style="position:absolute;top:-12px;right:12px;font-size:1.2rem;background:white;padding:2px 6px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">🖥️</div>
+                {lead_badge}
+                <div style="position:absolute;top:12px;left:12px;width:12px;height:12px;border-radius:50%;background:{cfg['dot']};box-shadow:0 0 10px {cfg['dot']}80;"></div>
                 <div style="text-align:center;margin:0.5rem 0;">
-                    <span style="
-                        background: {st_style['bg']};
-                        color: {st_style['color']};
-                        padding: 5px 14px;
-                        border-radius: 20px;
-                        font-size: 0.7rem;
-                        font-weight: 600;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 5px;
-                    ">
-                        <span style="width:8px;height:8px;border-radius:50%;background:{st_style['dot_bg']};"></span>
-                        {st_style['label']}
-                    </span>
+                    <div style="width:60px;height:60px;margin:0 auto;background:linear-gradient(145deg,#fff,#f1f5f9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid {accent_color};box-shadow:0 4px 12px rgba(0,0,0,0.1);">{agent.get('emoji', '🤖')}</div>
                 </div>
-
-                <!-- Desk Stats -->
-                <div style="
-                    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-                    border-radius: 10px;
-                    padding: 8px;
-                    margin-top: 8px;
-                    font-size: 0.7rem;
-                ">
-                    <div style="display:flex;justify-content:space-between;padding:2px 0;color:#64748b;">
-                        <span>📊 Tokens</span>
-                        <span style="font-weight:600;color:#1e293b;">{format_tokens(agent.get('tokens', 0))}</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;padding:2px 0;color:#64748b;">
-                        <span>📋 Tasks</span>
-                        <span style="font-weight:600;color:#1e293b;">{agent.get('task_count', 0)}</span>
-                    </div>
+                <h4 style="text-align:center;margin:0.4rem 0 0.2rem;font-size:0.95rem;color:#1e293b;">{agent.get('name', '?').title()}</h4>
+                <p style="text-align:center;color:#64748b;font-size:0.7rem;margin:0 0 0.5rem;">{agent.get('role', 'Agent')}</p>
+                <div style="text-align:center;margin:0.5rem 0;">
+                    <span style="background:{cfg['bg']};color:{cfg['color']};padding:4px 12px;border-radius:15px;font-size:0.7rem;font-weight:600;">● {cfg['label']}</span>
+                </div>
+                <div style="background:#f8fafc;border-radius:8px;padding:6px 8px;margin-top:8px;font-size:0.7rem;">
+                    <div style="display:flex;justify-content:space-between;color:#64748b;"><span>📊 Tokens</span><span style="font-weight:600;color:#1e293b;">{format_tokens(agent.get('tokens', 0))}</span></div>
+                    <div style="display:flex;justify-content:space-between;color:#64748b;"><span>📋 Tasks</span><span style="font-weight:600;color:#1e293b;">{agent.get('task_count', 0)}</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Current task (if any) - separate card below
             if agent.get('current_task'):
-                task_text = agent.get('current_task', '')
-                truncated = task_text[:40] + '...' if len(task_text) > 40 else task_text
-                st.markdown(f"""
-                <div style="
-                    background: linear-gradient(135deg, {accent_color}10, {accent_color}05);
-                    border-radius: 8px;
-                    padding: 6px 10px;
-                    margin-top: 6px;
-                    font-size: 0.7rem;
-                    border-left: 3px solid {accent_color};
-                ">
-                    <span style="color:#64748b;">💬 {truncated}</span>
-                </div>
-                """, unsafe_allow_html=True)
+                task_text = agent.get('current_task', '')[:40]
+                if len(agent.get('current_task', '')) > 40:
+                    task_text += '...'
+                st.markdown(f'<div style="background:{accent_color}10;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:0.7rem;border-left:3px solid {accent_color};"><span style="color:#64748b;">💬 {task_text}</span></div>', unsafe_allow_html=True)
 
 
 def render_logs(logs: list):
