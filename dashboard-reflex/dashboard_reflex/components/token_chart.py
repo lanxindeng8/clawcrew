@@ -206,8 +206,9 @@ def token_trend_chart() -> rx.Component:
     height = 100
     padding = 20
 
-    # Sample data points
-    points = "20,80 50,65 80,70 110,55 140,60 170,45 200,50 230,35 260,40 280,30"
+    # Sample data as path (converted from polyline points)
+    line_path = "M 20 80 L 50 65 L 80 70 L 110 55 L 140 60 L 170 45 L 200 50 L 230 35 L 260 40 L 280 30"
+    fill_path = "M 20 100 L 20 80 L 50 65 L 80 70 L 110 55 L 140 60 L 170 45 L 200 50 L 230 35 L 260 40 L 280 30 L 280 100 Z"
 
     return rx.el.div(
         rx.text(
@@ -222,15 +223,15 @@ def token_trend_chart() -> rx.Component:
             rx.el.line(x1="20", y1="50", x2="280", y2="50", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
             rx.el.line(x1="20", y1="80", x2="280", y2="80", stroke="rgba(255,255,255,0.05)", stroke_width="1"),
 
-            # Fill area (solid color with opacity)
-            rx.el.polygon(
-                points=f"20,100 {points} 280,100",
+            # Fill area (using path instead of polygon)
+            rx.el.path(
+                d=fill_path,
                 fill=f"{COLORS['primary']}30",
             ),
 
-            # Line
-            rx.el.polyline(
-                points=points,
+            # Line (using path instead of polyline)
+            rx.el.path(
+                d=line_path,
                 fill="none",
                 stroke=COLORS["primary"],
                 stroke_width="2.5",
