@@ -240,24 +240,39 @@ cd clawcrew
 ./setup.sh
 ```
 
-### Start the Crew
+### After Installation
 
 ```bash
-clawcrew start   # or: openclaw gateway restart
-clawcrew status  # Check if everything is running
+# 1. Reload your shell (or restart terminal)
+source ~/.profile   # or ~/.zshrc depending on your shell
+
+# 2. Configure ClawCrew (Telegram bot, OpenClaw settings)
+clawcrew init
+
+# 3. Start the system
+clawcrew start
+
+# 4. Verify everything is running
+clawcrew status
 ```
 
 ### Send a Task
 
-In your Telegram group:
+**Option 1: Telegram** — Send a message in your Telegram group:
 ```
 Create a Python module to calculate distance between two points
 ```
 
-Or use the CLI:
+**Option 2: CLI** — Run agents directly:
 ```bash
+# Chain multiple agents (auto context passing)
 clawcrew chain "Create a distance calculator module" design code test
+
+# Or run a single agent
+clawcrew run design -t "Design a REST API for user authentication"
 ```
+
+OrcaBot will automatically coordinate DesignBot → CodeBot → TestBot to complete the task.
 
 ---
 
