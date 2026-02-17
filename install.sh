@@ -69,9 +69,8 @@ has_command() {
     command -v "$1" &> /dev/null
 }
 
-# Global variable for Python/pip commands
+# Global variable for Python command (pip is always invoked via python -m pip)
 PYTHON_CMD="python3"
-PIP_CMD="pip3"
 
 # Check Python version
 check_python() {
@@ -81,8 +80,15 @@ check_python() {
     if has_command python3.11; then
         PY_VERSION=$(python3.11 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         PYTHON_CMD="python3.11"
-        PIP_CMD="pip3.11"
         success "Python $PY_VERSION (python3.11)"
+        return 0
+    fi
+
+    # Check Homebrew Python location directly (may not be in PATH)
+    if [ -x "/opt/homebrew/bin/python3.11" ]; then
+        PY_VERSION=$(/opt/homebrew/bin/python3.11 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        PYTHON_CMD="/opt/homebrew/bin/python3.11"
+        success "Python $PY_VERSION (homebrew)"
         return 0
     fi
 
@@ -104,11 +110,8 @@ check_python() {
         if has_command brew; then
             step "Installing Python via Homebrew..."
             brew install python@3.11
-            # Update PATH to include Homebrew Python
-            export PATH="/opt/homebrew/opt/python@3.11/libexec/bin:$PATH"
-            # Use the specific version commands
-            PYTHON_CMD="python3.11"
-            PIP_CMD="pip3.11"
+            # Use absolute path since it may not be in PATH yet
+            PYTHON_CMD="/opt/homebrew/bin/python3.11"
         else
             error "Python 3.10+ required. Install Homebrew first: https://brew.sh"
         fi
@@ -116,34 +119,29 @@ check_python() {
         step "Installing Python via apt..."
         sudo apt-get update && sudo apt-get install -y python3.11 python3.11-venv python3-pip
         PYTHON_CMD="python3.11"
-        PIP_CMD="pip3.11"
     fi
 
     success "Python installed"
 }
 
-# Check pip
+# Check pip (always use python -m pip for reliability)
 check_pip() {
     step "Checking pip..."
 
-    # Check if our specific pip command works
-    if has_command "$PIP_CMD"; then
-        success "$PIP_CMD"
-    elif has_command pip3; then
-        # Fallback to pip3 if PIP_CMD not available
-        PIP_CMD="pip3"
-        success "pip3"
+    # Always use python -m pip to ensure we use the correct Python's pip
+    if $PYTHON_CMD -m pip --version &> /dev/null; then
+        PIP_VERSION=$($PYTHON_CMD -m pip --version | cut -d' ' -f2)
+        success "pip $PIP_VERSION (via $PYTHON_CMD -m pip)"
     else
         step "Installing pip..."
         $PYTHON_CMD -m ensurepip --upgrade 2>/dev/null || {
             if [ "$OS" == "macos" ]; then
-                $PYTHON_CMD -m pip install --upgrade pip
+                # Download get-pip.py as fallback
+                curl -sSL https://bootstrap.pypa.io/get-pip.py | $PYTHON_CMD
             else
                 sudo apt-get install -y python3-pip
             fi
         }
-        # Use python -m pip as fallback
-        PIP_CMD="$PYTHON_CMD -m pip"
         success "pip installed"
     fi
 }
@@ -203,11 +201,11 @@ install_clawcrew() {
     # Check if installing from PyPI or local
     if [ -f "pyproject.toml" ]; then
         # Local development install
-        $PIP_CMD install --user -e .
+        $PYTHON_CMD -m pip install --user -e .
     else
         # Install from PyPI (when published)
         # For now, install from GitHub
-        $PIP_CMD install --user git+https://github.com/lanxindeng8/clawcrew.git
+        $PYTHON_CMD -m pip install --user git+https://github.com/lanxindeng8/clawcrew.git
     fi
 
     success "ClawCrew installed"
