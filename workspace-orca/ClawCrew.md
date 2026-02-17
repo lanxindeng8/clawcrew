@@ -257,7 +257,9 @@ git apply ../tests.patch
 # Create branch and commit
 git checkout -b feature-caching
 git add -A
-git commit -m "Add caching layer"
+git commit -m "Add caching layer
+
+Contributed by ClawCrew"
 
 # Create PR
 ~/.openclaw/bin/agent-cli.py create-pr \
@@ -276,6 +278,71 @@ git commit -m "Add caching layer"
 ├── design.md             # Modification plan
 ├── changes.patch         # Code changes (unified diff)
 └── tests.patch           # Test changes (unified diff)
+```
+
+---
+
+## Multi-Model Design Workflow
+
+When a task benefits from multiple AI perspectives (e.g., frontend UI design), users can request designs from multiple models, then synthesize them.
+
+### User Request Format
+
+Users can specify models in their task:
+- "Design a dashboard UI using **grok and gemini**, synthesize with **gpt-4**"
+- "Get design perspectives from **claude, gemini, grok**"
+
+### Workflow Steps
+
+#### Step 1: Parallel Design Generation
+
+```bash
+# Grok perspective (innovation focus)
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design dashboard UI. Focus on innovative interactions." \
+  -m "xai/grok-2" \
+  -o ~/.openclaw/artifacts/<task_id>/design-grok.md
+
+# Gemini perspective (usability focus)
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Design dashboard UI. Focus on usability and accessibility." \
+  -m "google/gemini-pro" \
+  -o ~/.openclaw/artifacts/<task_id>/design-gemini.md
+```
+
+#### Step 2: Synthesize
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Synthesize these designs into one cohesive spec. Take best ideas from each." \
+  -m "openai/gpt-4" \
+  -c ~/.openclaw/artifacts/<task_id>/design-grok.md \
+  -c ~/.openclaw/artifacts/<task_id>/design-gemini.md \
+  -o ~/.openclaw/artifacts/<task_id>/design-final.md
+```
+
+#### Step 3: Continue Standard Workflow
+
+Use `design-final.md` for Code and Test phases.
+
+### Supported Model IDs
+
+| Provider | Model ID |
+|----------|----------|
+| Anthropic | `anthropic/claude-sonnet-4-5`, `anthropic/claude-opus-4-5` |
+| OpenAI | `openai/gpt-4`, `openai/gpt-4-turbo` |
+| Google | `google/gemini-pro`, `google/gemini-1.5-pro` |
+| xAI | `xai/grok-2` |
+
+### Multi-Model Artifacts
+
+```
+~/.openclaw/artifacts/<task_id>/
+├── design-grok.md        # Grok's design
+├── design-gemini.md      # Gemini's design
+├── design-final.md       # Synthesized design
+├── main.tsx              # Implementation
+└── test_main.tsx         # Tests
 ```
 
 ---

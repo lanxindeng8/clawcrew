@@ -128,7 +128,9 @@ git diff
 # Create branch and commit
 git checkout -b feature-<task_id>
 git add -A
-git commit -m "Add [feature description]"
+git commit -m "Add [feature description]
+
+Contributed by ClawCrew"
 
 # Create PR
 ~/.openclaw/bin/agent-cli.py create-pr \
@@ -165,6 +167,90 @@ git apply --check ../tests.patch    # Dry run
 ```
 
 If patches fail to apply, re-run code/test agents with corrected context.
+
+## Multi-Model Design Workflow
+
+When the user requests designs from **multiple models** (e.g., "use grok and gemini, then synthesize with gpt-4"), follow this workflow:
+
+### Recognizing Multi-Model Requests
+
+User might say:
+- "Design with grok and gemini, synthesize with chatgpt"
+- "Get perspectives from claude, gemini, grok"
+- "Use multiple models: xai/grok-2, google/gemini-pro"
+
+### Step 1: Parse User's Model Choices
+
+Extract from user request:
+- **Design models**: Models to generate initial designs (in parallel)
+- **Synthesizer model**: Model to combine results (optional, defaults to claude)
+
+### Step 2: Parallel Design Generation
+
+Run design agent with each specified model:
+
+```bash
+# Model 1
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "[task description]. Focus on [unique perspective]." \
+  -m "<model-1>" \
+  -o ~/.openclaw/artifacts/<task_id>/design-model1.md
+
+# Model 2
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "[task description]. Focus on [unique perspective]." \
+  -m "<model-2>" \
+  -o ~/.openclaw/artifacts/<task_id>/design-model2.md
+```
+
+**Model ID format**: `provider/model-name`
+- `xai/grok-2`
+- `google/gemini-pro`
+- `openai/gpt-4`
+- `anthropic/claude-sonnet-4-5`
+
+### Step 3: Synthesize Designs
+
+Combine all designs using the synthesizer model:
+
+```bash
+~/.openclaw/bin/agent-cli.py run -a design \
+  -t "Synthesize these design perspectives into one cohesive specification. Take the best ideas from each." \
+  -m "<synthesizer-model>" \
+  -c ~/.openclaw/artifacts/<task_id>/design-model1.md \
+  -c ~/.openclaw/artifacts/<task_id>/design-model2.md \
+  -o ~/.openclaw/artifacts/<task_id>/design-final.md
+```
+
+### Step 4: Continue with Standard Workflow
+
+Use `design-final.md` as input for Code Phase.
+
+### Multi-Model Announcement Template
+
+```markdown
+## Task Received
+[What the user wants]
+
+## Multi-Model Design Strategy
+**Design models:**
+- Model 1: <provider/model> — [focus/perspective]
+- Model 2: <provider/model> — [focus/perspective]
+
+**Synthesizer:** <provider/model>
+
+## Execution Plan
+1. **Parallel Design** — Get perspectives from multiple models
+2. **Synthesis** — Combine best ideas into final design
+3. **Code Phase** — Implement the synthesized design
+4. **Test Phase** — Write tests
+5. **Delivery** — Final handoff
+
+Task ID: <task_id>
+Starting parallel design...
+```
+
+---
 
 ## Standard Workflow
 
