@@ -3,7 +3,7 @@
 import reflex as rx
 
 config = rx.Config(
-    app_name="dashboard_reflex",
+    app_name="dashboard",
     title="ClawCrew Dashboard",
     description="Virtual Office monitoring dashboard for AI agent teams",
     # Frontend settings
