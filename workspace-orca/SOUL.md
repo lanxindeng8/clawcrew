@@ -51,41 +51,79 @@ These are DEPRECATED and WILL FAIL with error:
 
 When a task involves modifying an external GitHub repository, use **Repo Mode**. In this mode, agents output **Unified Diff patches** instead of standalone files.
 
-### Two Workflow Modes
+### Three Workflow Modes
 
 | Mode | When | Output |
 |------|------|--------|
 | **Standalone** | No external repo | Complete new files (`main.py`, `test_main.py`) |
-| **Repo Mode** | Task involves existing repo | Unified Diff patches (`changes.patch`, `tests.patch`) |
+| **Repo Mode (Small)** | Bug fix, single-file change | `code` → patch → push (skip design/test) |
+| **Repo Mode (Large)** | New feature, cross-module change | `design` → `code` → `test` → patch → PR |
 
-### Repo Mode Workflow
+### Repo Knowledge Cache (Per-Repo Persistent Context)
 
-#### Step 1: Analyze Repository & Read Files
+**Before starting any Repo Mode task**, check if a knowledge file exists:
 
 ```bash
-# Analyze repo (clone is automatically saved to artifacts)
-~/.openclaw/bin/agent-cli.py summarize-repo \
-  --url https://github.com/user/repo \
-  --task-id <task_id>
+ls ~/.openclaw/team-knowledge/repos/<repo-name>.md
+```
 
-# Read specific files for detailed context
+- **If it exists**: pass it as `-c` to all agents — skip `summarize-repo`
+- **If it doesn't exist**: run `summarize-repo`, then save output to `~/.openclaw/team-knowledge/repos/<repo-name>.md`
+
+This avoids re-analyzing the same repo on every task. Knowledge accumulates over time.
+
+**Knowledge file template** (`~/.openclaw/team-knowledge/repos/<repo>.md`):
+```markdown
+# <Repo Name> — Knowledge Cache
+
+## Architecture
+[Module structure, key directories]
+
+## Test Setup
+[How to run tests: pytest command, test locations]
+
+## Code Conventions
+[Type hints? Docstrings? Style guide?]
+
+## Known Gotchas
+[Env vars needed, known bugs, workarounds]
+
+## Recent Changes
+[Last updated: YYYY-MM-DD — brief summary]
+```
+
+### Repo Mode Workflow (Large Tasks)
+
+#### Step 0: Load or Build Repo Knowledge
+
+```bash
+REPO_KNOWLEDGE=~/.openclaw/team-knowledge/repos/<repo-name>.md
+
+# If no cache exists, build it
+if [ ! -f "$REPO_KNOWLEDGE" ]; then
+  ~/.openclaw/bin/agent-cli.py summarize-repo \
+    --url https://github.com/user/repo \
+    --task-id <task_id>
+  # Save summary as repo knowledge
+  cp ~/.openclaw/artifacts/<task_id>/repo_summary.md "$REPO_KNOWLEDGE"
+fi
+```
+
+#### Step 1: Read Relevant Files
+
+```bash
 ~/.openclaw/bin/agent-cli.py read-files \
   --repo-path ~/.openclaw/artifacts/<task_id>/repo \
   --files "src/api.py,src/models.py,tests/test_api.py" \
   -o ~/.openclaw/artifacts/<task_id>/repo_context.md
 ```
 
-**Output:**
-- `repo_summary.md` — Architecture overview
-- `repo_context.md` — File contents with line numbers
-- `repo/` — Cloned repository
-
 #### Step 2: Design Phase (Repo Mode)
 
 ```bash
 ~/.openclaw/bin/agent-cli.py run -a design \
   -t "Design [feature] for this codebase. Output in Repo Mode format specifying which files to modify and where." \
-  -c ~/.openclaw/artifacts/<task_id>/repo_summary.md \
+  -c $REPO_KNOWLEDGE \
   -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
   -o ~/.openclaw/artifacts/<task_id>/design.md
 ```
@@ -98,7 +136,7 @@ When a task involves modifying an external GitHub repository, use **Repo Mode**.
 ~/.openclaw/bin/agent-cli.py run -a code \
   -t "Implement the design. Output as unified diff patches that can be applied with git apply." \
   -c ~/.openclaw/artifacts/<task_id>/design.md \
-  -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
+  -c $REPO_KNOWLEDGE \
   -o ~/.openclaw/artifacts/<task_id>/changes.patch
 ```
 
@@ -110,20 +148,21 @@ When a task involves modifying an external GitHub repository, use **Repo Mode**.
 ~/.openclaw/bin/agent-cli.py run -a test \
   -t "Add tests following the repo's testing patterns. Output as unified diff." \
   -c ~/.openclaw/artifacts/<task_id>/changes.patch \
-  -c ~/.openclaw/artifacts/<task_id>/repo_context.md \
+  -c $REPO_KNOWLEDGE \
   -o ~/.openclaw/artifacts/<task_id>/tests.patch
 ```
 
 #### Step 5: Apply Patches & Create PR
 
 ```bash
-# Apply patches to the cloned repo
+# Dry run first
 cd ~/.openclaw/artifacts/<task_id>/repo
+git apply --check ../changes.patch
+git apply --check ../tests.patch
+
+# Apply
 git apply ../changes.patch
 git apply ../tests.patch
-
-# Verify patches applied cleanly
-git diff
 
 # Create branch and commit
 git checkout -b feature-<task_id>
@@ -139,6 +178,31 @@ Contributed by ClawCrew"
   -H feature-<task_id>
 ```
 
+#### Step 6: Update Repo Knowledge
+
+After completing a task, append any new learnings to the repo knowledge file:
+
+```bash
+echo "\n## Recent Changes\nLast updated: $(date +%Y-%m-%d) — [brief summary]" >> $REPO_KNOWLEDGE
+```
+
+### Repo Mode (Small Tasks) — Quick Flow
+
+For bug fixes and single-file changes:
+
+```bash
+# Load repo knowledge (required)
+# Optionally read the specific file
+# code agent → patch → apply → push directly (no PR needed for trivial fixes)
+~/.openclaw/bin/agent-cli.py run -a code \
+  -t "Fix [bug]. Output as unified diff patch." \
+  -c $REPO_KNOWLEDGE \
+  -o ~/.openclaw/artifacts/<task_id>/fix.patch
+
+cd ~/.openclaw/artifacts/<task_id>/repo
+git apply ../fix.patch && git add -A && git commit -m "fix: [description]" && git push
+```
+
 ### Repo Mode Announcement Template
 
 ```markdown
@@ -146,7 +210,7 @@ Contributed by ClawCrew"
 User wants to add [feature] to https://github.com/user/repo
 
 ## Execution Plan (Repo Mode)
-1. **Repo Analysis** — Clone and analyze repository structure
+1. **Repo Knowledge** — Load cache or build from summarize-repo
 2. **File Reading** — Read relevant source files with line numbers
 3. **Design Phase** — Design modifications (Repo Mode format)
 4. **Code Phase** — Output unified diff patches
