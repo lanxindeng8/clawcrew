@@ -72,7 +72,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
 
     # Show current ClawCrew accounts
     echo "--- Current ClawCrew Configuration ---"
-    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test", "github"))) | length' "$OPENCLAW_CONFIG")
+    CLAWCREW_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
     echo "  ClawCrew agents installed: $CLAWCREW_AGENTS"
 
     ORCA_BINDINGS=$(jq -r '.bindings | map(select(.agentId == "orca")) | length' "$OPENCLAW_CONFIG")
@@ -109,14 +109,14 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     if [ -n "$REMOVE_ACCOUNT" ]; then
         jq --arg acc "$REMOVE_ACCOUNT" '
         # Remove all ClawCrew agents
-        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test", "github") | not)]
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
         # Remove ClawCrew bindings
-        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test", "github") | not)]
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
         # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. | IN("orca", "design", "code", "test", "github") | not)] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
               end
             ))
           else . end
@@ -127,14 +127,14 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     else
         jq '
         # Remove all ClawCrew agents
-        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test", "github") | not)]
+        .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
         # Remove ClawCrew bindings
-        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test", "github") | not)]
+        | .bindings = [.bindings[] | select(.agentId | IN("orca", "design", "code", "test") | not)]
         # Remove broadcast entries containing ClawCrew agents
         | if .broadcast then
             .broadcast = (.broadcast | with_entries(
               if .key == "strategy" then .
-              else .value = [.value[] | select(. | IN("orca", "design", "code", "test", "github") | not)] | select(.value | length > 0)
+              else .value = [.value[] | select(. | IN("orca", "design", "code", "test") | not)] | select(.value | length > 0)
               end
             ))
           else . end
@@ -144,7 +144,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
 
     # Remove workspace folders
     if [ "$REMOVE_WORKSPACES" = "y" ] || [ "$REMOVE_WORKSPACES" = "Y" ]; then
-        for workspace in workspace-orca workspace-design workspace-code workspace-test workspace-github; do
+        for workspace in workspace-orca workspace-design workspace-code workspace-test; do
             if [ -d "$OPENCLAW_DIR/$workspace" ]; then
                 rm -rf "$OPENCLAW_DIR/$workspace"
                 echo "[3/4] Removed $OPENCLAW_DIR/$workspace"
@@ -406,7 +406,7 @@ AGENTS_JSON=$(cat <<EOF
     "model": "anthropic/claude-sonnet-4-5",
     "identity": { "name": "OrcaBot" },
     "groupChat": { "mentionPatterns": ["@orca", "@OrcaBot"] },
-    "subagents": { "allowAgents": ["design", "code", "test", "github"] }
+    "subagents": { "allowAgents": ["design", "code", "test"] }
   },
   {
     "id": "design",
@@ -428,13 +428,6 @@ AGENTS_JSON=$(cat <<EOF
     "workspace": "$OPENCLAW_DIR/workspace-test",
     "model": "anthropic/claude-sonnet-4-5",
     "identity": { "name": "TestBot" }
-  },
-  {
-    "id": "github",
-    "name": "GitHubBot",
-    "workspace": "$OPENCLAW_DIR/workspace-github",
-    "model": "anthropic/claude-sonnet-4-5",
-    "identity": { "name": "GitHubBot" }
   }
 ]
 EOF
@@ -510,7 +503,7 @@ jq --argjson agents "$AGENTS_JSON" \
    # Ensure agents.list exists
    | .agents.list = (if .agents.list then .agents.list else [] end)
    # Remove existing ClawCrew agents if any
-   | .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test", "github") | not)]
+   | .agents.list = [.agents.list[] | select(.id | IN("orca", "design", "code", "test") | not)]
    # Add all ClawCrew agents
    | .agents.list += $agents
 
@@ -538,7 +531,7 @@ echo "[3/5] Added ClawCrew agents (orca, design, code, test, github) and Telegra
 # Copy workspace folders and bin
 echo "[4/5] Copying files..."
 
-for workspace in workspace-orca workspace-design workspace-code workspace-test workspace-github; do
+for workspace in workspace-orca workspace-design workspace-code workspace-test; do
     if [ -d "$SCRIPT_DIR/$workspace" ]; then
         cp -r "$SCRIPT_DIR/$workspace" "$OPENCLAW_DIR/"
         echo "  Copied $workspace"
@@ -588,11 +581,11 @@ else
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
-VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test", "github"))) | length' "$OPENCLAW_CONFIG")
-if [ "$VERIFY_AGENTS" -eq 5 ]; then
-    echo "  ✓  All ClawCrew agents added (orca, design, code, test, github)"
+VERIFY_AGENTS=$(jq -r '.agents.list | map(select(.id | IN("orca", "design", "code", "test"))) | length' "$OPENCLAW_CONFIG")
+if [ "$VERIFY_AGENTS" -eq 4 ]; then
+    echo "  ✓  All ClawCrew agents added (orca, design, code, test)"
 else
-    echo "  ✗  Expected 5 ClawCrew agents, found $VERIFY_AGENTS"
+    echo "  ✗  Expected 4 ClawCrew agents, found $VERIFY_AGENTS"
     VERIFY_ERRORS=$((VERIFY_ERRORS + 1))
 fi
 
