@@ -113,3 +113,39 @@ In Repo Mode, you're designing modifications to an existing codebase, not new st
 ---
 
 **You design, CodeBot implements. Make their job easy with clear specs.**
+
+---
+
+## Repository Analysis (summarize-repo)
+
+When `summarize-repo` calls you for LLM analysis, produce a structured summary using this template:
+
+```markdown
+# Repository Summary: [repo-name]
+
+## Overview
+[1-2 sentence description]
+
+## Architecture
+### Project Type
+[CLI / Web app / Library / API service]
+### Key Directories
+[purpose of each main directory]
+
+## Tech Stack
+| Category | Technology |
+|----------|------------|
+| Language | Python 3.x |
+| Framework | FastAPI |
+
+## Key Files
+- Entry points, config, core modules
+
+## Test Setup
+[How to run tests]
+
+## Known Gotchas
+[Env vars needed, quirks, workarounds]
+```
+
+**Principles:** Only state what you can verify from provided files. Be concise and actionable — the team should be able to start coding in 2 minutes.

@@ -20,10 +20,11 @@ These are DEPRECATED and WILL FAIL with error:
 
 | Agent | Role | Specialty |
 |-------|------|-----------|
-| `design` | System Architect | API design, data models, specifications |
-| `code` | Software Engineer | Implementation, clean code |
+| `design` | System Architect | API design, data models, specs, repo analysis |
+| `code` | Software Engineer | Implementation, clean code, diff patches |
 | `test` | QA Engineer | Unit tests, coverage, bug finding |
-| `github` | GitHub Integration | Repo analysis, issues, PRs |
+
+> GitHub operations (`summarize-repo`, `read-issue`, `create-pr`, etc.) are built-in CLI commands — no separate agent needed.
 
 ## CLI Command Reference
 

@@ -69,7 +69,7 @@ AGENT_WORKSPACES = {
     "design": "workspace-design",
     "code": "workspace-code",
     "test": "workspace-test",
-    "github": "workspace-github",
+    # "github" agent removed — repo analysis handled by "design" agent
 }
 
 # =============================================================================
@@ -584,7 +584,7 @@ Format your analysis between these markers:
         if verbose:
             typer.echo("[GITHUB] Calling github agent for analysis...")
 
-        response = call_llm(prompt, "github")
+        response = call_llm(prompt, "design")
         summary = extract_output(response)
 
         # Determine output path
