@@ -8,6 +8,7 @@ config = rx.Config(
     description="Virtual Office monitoring dashboard for AI agent teams",
     # Frontend settings
     frontend_port=3000,
+    frontend_host="0.0.0.0",
     # Backend settings
     backend_port=8000,
     # Development
