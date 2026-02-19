@@ -28,24 +28,54 @@ These are DEPRECATED and WILL FAIL with error:
 ## CLI Command Reference
 
 ```bash
+# ── Agent Tasks ──────────────────────────────────────────────
 # Run an agent with a task
 ~/.openclaw/bin/agent-cli.py run -a design -t "Design a REST API for user auth" -o ~/.openclaw/artifacts/task-001/design.md
 
-# Run with context file
-~/.openclaw/bin/agent-cli.py run -a code -t "Implement the API" -c ~/.openclaw/artifacts/task-001/design.md -o ~/.openclaw/artifacts/task-001/auth.py
+# Run with context file(s)
+~/.openclaw/bin/agent-cli.py run -a code -t "Implement the API" \
+  -c ~/.openclaw/artifacts/task-001/design.md \
+  -c ~/.openclaw/team-knowledge/repos/my-repo.md \
+  -o ~/.openclaw/artifacts/task-001/auth.py
 
-# List available agents
-~/.openclaw/bin/agent-cli.py list-agents
+# ── Agent Memory ─────────────────────────────────────────────
+# Each agent has its own persistent memory (~/workspace-<agent>/memory/YYYY-MM-DD.md)
+# Automatically loaded (last 7 days) when the agent runs
 
-# Show agent's memory
-~/.openclaw/bin/agent-cli.py show-memory -a design
+~/.openclaw/bin/agent-cli.py list-agents          # List available agents
+~/.openclaw/bin/agent-cli.py show-memory -a code  # Show code agent's recent memory
+~/.openclaw/bin/agent-cli.py clear-memory -a test # Clear test agent's memory
+
+# ── Repo Analysis ─────────────────────────────────────────────
+# Analyze a remote repo (clones to ~/.openclaw/artifacts/<task_id>/repo/)
+~/.openclaw/bin/agent-cli.py summarize-repo --url https://github.com/user/repo --task-id task-001
+~/.openclaw/bin/agent-cli.py summarize-repo --url https://github.com/user/private-repo --pat ghp_xxx
+
+# Analyze an already-cloned local repo (no re-clone)
+~/.openclaw/bin/agent-cli.py summarize-repo --path ~/.openclaw/artifacts/task-001/repo
+
+# Read specific files with line numbers (for precise patch context)
+~/.openclaw/bin/agent-cli.py read-files \
+  -r ~/.openclaw/artifacts/task-001/repo \
+  -f "src/api.py,src/models.py,tests/test_api.py" \
+  -o ~/.openclaw/artifacts/task-001/repo_context.md
+
+# ── GitHub Issues & PRs ───────────────────────────────────────
+~/.openclaw/bin/agent-cli.py list-issues -r user/repo           # List open issues
+~/.openclaw/bin/agent-cli.py read-issue -r user/repo -i 42      # Read issue #42
+~/.openclaw/bin/agent-cli.py create-pr \
+  -r user/repo \
+  -t "Add feature X" \
+  -H feature-branch \
+  -b "Closes #42"                                                # Create PR
 ```
 
-**Parameters:**
+**`run` Parameters:**
 - `-a, --agent` — Agent name: `design`, `code`, `test`, or `github`
 - `-t, --task` — Task description (be specific!)
 - `-o, --output` — Output file path
-- `-c, --context` — Context file to include
+- `-c, --context` — Context file to include (repeatable for multiple files)
+- `-m, --model` — Override model (e.g., `xai/grok-2`)
 
 ## GitHub Repository Handling (Repo Mode)
 
