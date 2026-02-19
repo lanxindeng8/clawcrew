@@ -201,14 +201,28 @@ echo ""
 CLAWCREW_ENV="$OPENCLAW_DIR/.clawcrew.env"
 USE_SAVED=false
 
+# Helper function to check if value is a placeholder
+is_placeholder() {
+    [[ "$1" == *"STORED_IN_KEYCHAIN"* ]] || [[ "$1" == *"PLACEHOLDER"* ]] || [[ -z "$1" ]]
+}
+
 if [ -f "$CLAWCREW_ENV" ]; then
     echo "Found saved credentials at $CLAWCREW_ENV"
     source "$CLAWCREW_ENV"
 
-    if [ -n "$CLAWCREW_BOT_TOKEN" ] && [ -n "$CLAWCREW_GROUP_ID" ] && [ -n "$CLAWCREW_ALLOWED_IDS" ]; then
+    # Check if any credential is a placeholder
+    HAS_PLACEHOLDER=false
+    if is_placeholder "$CLAWCREW_BOT_TOKEN" || is_placeholder "$CLAWCREW_GROUP_ID" || is_placeholder "$CLAWCREW_ALLOWED_IDS"; then
+        HAS_PLACEHOLDER=true
+    fi
+
+    if [ "$HAS_PLACEHOLDER" = true ]; then
+        echo ""
+        echo "⚠️  Saved credentials contain placeholders. Please enter actual values."
+    elif [ -n "$CLAWCREW_BOT_TOKEN" ] && [ -n "$CLAWCREW_GROUP_ID" ] && [ -n "$CLAWCREW_ALLOWED_IDS" ]; then
         echo ""
         echo "Saved configuration:"
-        echo "  Bot Token: ${CLAWCREW_BOT_TOKEN:0:20}..."
+        echo "  Bot Token: ${CLAWCREW_BOT_TOKEN:0:10}...${CLAWCREW_BOT_TOKEN: -4}"
         echo "  Group ID: $CLAWCREW_GROUP_ID"
         echo "  Allowed Users: $CLAWCREW_ALLOWED_IDS"
         echo "  Account Name: ${CLAWCREW_ACCOUNT_NAME:-clawcrew}"
@@ -283,7 +297,7 @@ fi
 
 echo ""
 echo "--- Configuration Summary ---"
-echo "  Bot Token: ${BOT_TOKEN:0:20}..."
+echo "  Bot Token: ${BOT_TOKEN:0:10}...${BOT_TOKEN: -4}"
 echo "  Group ID: $GROUP_ID"
 echo "  Allowed Users: $ALLOWED_IDS"
 echo "  Account Name: $ACCOUNT_NAME"
@@ -354,6 +368,26 @@ fi
 
 echo ""
 echo "--- Setting up ClawCrew ---"
+
+# Final validation: ensure no placeholders are being written
+if is_placeholder "$BOT_TOKEN"; then
+    echo "Error: Bot token is a placeholder. Please run setup again with actual credentials."
+    exit 1
+fi
+if is_placeholder "$GROUP_ID"; then
+    echo "Error: Group ID is a placeholder. Please run setup again with actual credentials."
+    exit 1
+fi
+if is_placeholder "$ALLOWED_IDS"; then
+    echo "Error: Allowed IDs is a placeholder. Please run setup again with actual credentials."
+    exit 1
+fi
+
+# Validate GROUP_ID is a number (can be negative)
+if ! [[ "$GROUP_ID" =~ ^-?[0-9]+$ ]]; then
+    echo "Error: Group ID must be a number (e.g., -1234567890)"
+    exit 1
+fi
 
 # Convert comma-separated IDs to JSON array
 ALLOWED_IDS_JSON=$(echo "$ALLOWED_IDS" | tr ',' '\n' | jq -R . | jq -s .)
