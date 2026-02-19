@@ -63,7 +63,7 @@ if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
     echo "================================================"
     echo ""
     echo "This will remove:"
-    echo "  - ClawCrew agents (orca, design, code, test, github)"
+    echo "  - ClawCrew agents (orca, design, code, test)"
     echo "  - OrcaBot Telegram binding"
     echo "  - Broadcast entries"
     echo "  - Telegram account (optional)"
@@ -526,7 +526,7 @@ jq --argjson agents "$AGENTS_JSON" \
 
 echo "[2/5] Updated openclaw.json with required settings"
 
-echo "[3/5] Added ClawCrew agents (orca, design, code, test, github) and Telegram binding"
+echo "[3/5] Added ClawCrew agents (orca, design, code, test) and Telegram binding"
 
 # Copy workspace folders and bin
 echo "[4/5] Copying files..."
