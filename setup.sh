@@ -526,14 +526,12 @@ echo "  Created artifacts/"
 
 # Install Python dependencies
 echo "  Installing Python dependencies..."
-if command -v pip3 &> /dev/null; then
-    pip3 install --quiet typer 2>/dev/null || pip3 install typer
-    echo "  Installed typer"
-elif command -v pip &> /dev/null; then
-    pip install --quiet typer 2>/dev/null || pip install typer
-    echo "  Installed typer"
+if command -v pipx &> /dev/null; then
+    pipx install typer --include-deps 2>/dev/null && echo "  Installed typer via pipx" || echo "  typer already installed"
+elif command -v pip3 &> /dev/null; then
+    pip3 install --user --quiet typer 2>/dev/null && echo "  Installed typer" || echo "  ⚠️  pip install failed. Try: pipx install typer"
 else
-    echo "  ⚠️  pip not found. Please install manually: pip install typer"
+    echo "  ⚠️  pip not found. Please install: brew install pipx && pipx install typer"
 fi
 
 # Verify settings
